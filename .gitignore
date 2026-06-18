@@ -1,21 +1,26 @@
 # Python
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
-.env
-*.db
-*.sqlite3
 .venv/
 venv/
+env/
+*.db
+*.db-shm
+*.db-wal
+
+# Environment
+.env
+!.env.example
 
 # Node
 node_modules/
 dist/
-.vite/
+
+# Editor
+.vscode/
+.idea/
+*.swp
 
 # OS
 .DS_Store
-Thumbs.db
-
-# Temp MDB uploads
-/tmp/rechurch_*
