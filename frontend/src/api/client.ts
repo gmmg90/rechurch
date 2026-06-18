@@ -114,7 +114,8 @@ export const matrimoniApi = {
 }
 
 export const statsApi = {
-  get: () => api.get<Stats>('/stats/').then(r => r.data),
+  get: (params?: { dal?: string; al?: string }) =>
+    api.get<Stats>('/stats/', { params }).then(r => r.data),
 }
 
 export interface ParrocchiaConfig {
