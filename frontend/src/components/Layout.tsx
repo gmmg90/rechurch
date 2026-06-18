@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Church, Home, Droplets, Star, Heart, Upload } from 'lucide-react'
+import { Church, Home, Droplets, Star, Heart, Upload, Settings } from 'lucide-react'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: Home, end: true },
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/cresime', label: 'Cresime', icon: Star },
   { to: '/matrimoni', label: 'Matrimoni', icon: Heart },
   { to: '/importa', label: 'Importa Dati', icon: Upload },
+  { to: '/impostazioni', label: 'Impostazioni', icon: Settings },
 ]
 
 export default function Layout() {

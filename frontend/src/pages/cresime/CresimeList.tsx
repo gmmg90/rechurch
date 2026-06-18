@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, Plus, Pencil, Trash2 } from 'lucide-react'
-import { cresimeApi, type Cresima } from '../../api/client'
+import { Search, Plus, Pencil, Trash2, FileDown } from 'lucide-react'
+import { cresimeApi, pdfApi, type Cresima } from '../../api/client'
 
 export default function CresimeList() {
   const [search, setSearch] = useState('')
@@ -90,6 +90,15 @@ export default function CresimeList() {
                     <td className="px-4 py-3 text-gray-500">{c.numero_registro ?? '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end">
+                        <a
+                          href={pdfApi.cresimaUrl(c.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Scarica PDF"
+                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                        >
+                          <FileDown size={15} />
+                        </a>
                         <button
                           onClick={() => navigate(`/cresime/${c.id}/modifica`)}
                           className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"

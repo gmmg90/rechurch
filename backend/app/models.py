@@ -4,6 +4,23 @@ from sqlalchemy.sql import func
 from app.database import Base
 
 
+class ParrocchiaConfig(Base):
+    __tablename__ = "parrocchia_config"
+
+    id = Column(Integer, primary_key=True, default=1)
+    nome = Column(String(200), nullable=False, default="Parrocchia")
+    diocesi = Column(String(200), nullable=True)
+    indirizzo = Column(String(300), nullable=True)
+    cap = Column(String(10), nullable=True)
+    citta = Column(String(100), nullable=True)
+    provincia = Column(String(50), nullable=True)
+    telefono = Column(String(50), nullable=True)
+    email = Column(String(200), nullable=True)
+    parroco = Column(String(200), nullable=True)
+    logo_path = Column(String(500), nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class Battesimo(Base):
     __tablename__ = "battesimi"
 

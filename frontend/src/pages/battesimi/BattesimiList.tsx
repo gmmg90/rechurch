@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, Plus, Pencil, Trash2 } from 'lucide-react'
-import { battesimiApi, type Battesimo } from '../../api/client'
+import { Search, Plus, Pencil, Trash2, FileDown } from 'lucide-react'
+import { battesimiApi, pdfApi, type Battesimo } from '../../api/client'
 
 export default function BattesimiList() {
   const [search, setSearch] = useState('')
@@ -74,7 +74,7 @@ export default function BattesimiList() {
                   <th className="px-4 py-3 font-medium">Luogo</th>
                   <th className="px-4 py-3 font-medium">Ministro</th>
                   <th className="px-4 py-3 font-medium">N. Registro</th>
-                  <th className="px-4 py-3 font-medium w-24"></th>
+                  <th className="px-4 py-3 font-medium w-32"></th>
                 </tr>
               </thead>
               <tbody>
@@ -88,6 +88,15 @@ export default function BattesimiList() {
                     <td className="px-4 py-3 text-gray-500">{b.numero_registro ?? '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end">
+                        <a
+                          href={pdfApi.battesimoUrl(b.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Scarica PDF"
+                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                        >
+                          <FileDown size={15} />
+                        </a>
                         <button
                           onClick={() => navigate(`/battesimi/${b.id}/modifica`)}
                           className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"

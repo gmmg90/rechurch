@@ -3,6 +3,37 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+# ─── ParrocchiaConfig ─────────────────────────────────────────────────────────
+
+class ParrocchiaConfigUpdate(BaseModel):
+    nome: Optional[str] = None
+    diocesi: Optional[str] = None
+    indirizzo: Optional[str] = None
+    cap: Optional[str] = None
+    citta: Optional[str] = None
+    provincia: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    parroco: Optional[str] = None
+
+
+class ParrocchiaConfigResponse(BaseModel):
+    id: int
+    nome: str
+    diocesi: Optional[str] = None
+    indirizzo: Optional[str] = None
+    cap: Optional[str] = None
+    citta: Optional[str] = None
+    provincia: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    parroco: Optional[str] = None
+    logo_path: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
 # ─── Battesimo ────────────────────────────────────────────────────────────────
 
 class BattesimoBase(BaseModel):

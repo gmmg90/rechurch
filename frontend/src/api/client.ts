@@ -107,6 +107,40 @@ export const statsApi = {
   get: () => api.get<Stats>('/stats/').then(r => r.data),
 }
 
+export interface ParrocchiaConfig {
+  id: number
+  nome: string
+  diocesi?: string
+  indirizzo?: string
+  cap?: string
+  citta?: string
+  provincia?: string
+  telefono?: string
+  email?: string
+  parroco?: string
+  logo_path?: string
+  updated_at?: string
+}
+
+export const configApi = {
+  get: () => api.get<ParrocchiaConfig>('/config/').then(r => r.data),
+  update: (data: Partial<Omit<ParrocchiaConfig, 'id' | 'logo_path' | 'updated_at'>>) =>
+    api.put<ParrocchiaConfig>('/config/', data).then(r => r.data),
+  uploadLogo: (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post<{ logo_url: string }>('/config/logo', fd,
+      { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+  },
+  deleteLogo: () => api.delete('/config/logo'),
+}
+
+export const pdfApi = {
+  battesimoUrl: (id: number) => `/api/pdf/battesimo/${id}`,
+  cresimaUrl:   (id: number) => `/api/pdf/cresima/${id}`,
+  matrimonioUrl:(id: number) => `/api/pdf/matrimonio/${id}`,
+}
+
 export const importApi = {
   previewCsv: (tipo: string, file: File) => {
     const fd = new FormData()
