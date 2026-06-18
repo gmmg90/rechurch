@@ -64,10 +64,20 @@ export interface Matrimonio {
   updated_at?: string
 }
 
+export interface StatsPeriod {
+  periodo: string
+  battesimi: number
+  cresime: number
+  matrimoni: number
+}
+
 export interface Stats {
   battesimi: number
   cresime: number
   matrimoni: number
+  per_anno: StatsPeriod[]
+  per_mese: StatsPeriod[]
+  per_decennio: StatsPeriod[]
 }
 
 export const battesimiApi = {
