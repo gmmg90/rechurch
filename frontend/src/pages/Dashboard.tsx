@@ -2,111 +2,100 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Droplets, Star, Heart, TrendingUp, Plus, Search, X,
-  ArrowRight, CalendarRange,
+  Droplets, Star, Heart, Search, X,
+  ArrowRight, CalendarRange, Users, RotateCcw, GripVertical,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell, Sector,
 } from 'recharts'
+import ReactGridLayout, { WidthProvider, Responsive } from 'react-grid-layout'
+const RGL = WidthProvider(Responsive)
+type Layouts = ReactGridLayout.Layouts
+type Layout = ReactGridLayout.Layout
+import 'react-grid-layout/css/styles.css'
+import 'react-resizable/css/styles.css'
 import {
-  statsApi, battesimiApi, cresimeApi, matrimoniApi,
+  statsApi, battesimiApi, cresimeApi, matrimoniApi, dashboardApi,
   type StatsPeriod, type Battesimo, type Cresima, type Matrimonio,
 } from '../api/client'
+import ProssimiEventiWidget from './dashboard/ProssimiEventiWidget'
+import ContabilitaMeseWidget from './dashboard/ContabilitaMeseWidget'
 
-// ── Colori ────────────────────────────────────────────────────────────────────
+// ── Colours ───────────────────────────────────────────────────────────────────
 const C = { battesimi: '#3b82f6', cresime: '#f59e0b', matrimoni: '#f43f5e' }
-const MESI_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic']
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function fmtPeriodo(p: string, gran: string) {
-  if (gran === 'mesi') {
-    const [y, m] = p.split('-')
-    return `${MESI_SHORT[parseInt(m) - 1]} ${y}`
-  }
-  if (gran === 'decenni') return `${p.slice(0, 3)}0s`
-  return p
-}
-
+// ── Debounce ─────────────────────────────────────────────────────────────────
 function useDebounce<T>(value: T, delay: number): T {
-  const [v, setV] = useState(value)
-  useEffect(() => {
-    const t = setTimeout(() => setV(value), delay)
-    return () => clearTimeout(t)
-  }, [value, delay])
-  return v
+  const [d, setD] = useState(value)
+  useEffect(() => { const t = setTimeout(() => setD(value), delay); return () => clearTimeout(t) }, [value, delay])
+  return d
 }
 
-// ── Tooltip ───────────────────────────────────────────────────────────────────
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-lg px-4 py-3 text-sm">
-      <p className="font-semibold text-gray-700 mb-2">{label}</p>
-      {payload.map((e: any) => (
-        <div key={e.name} className="flex items-center gap-2 mb-0.5">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: e.color }} />
-          <span className="text-gray-500 capitalize">{e.name}:</span>
-          <span className="font-medium text-gray-800">{e.value}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Donut shape ───────────────────────────────────────────────────────────────
-function ActiveShape(props: any) {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value, percent } = props
+// ── Active donut shape ────────────────────────────────────────────────────────
+const ActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props
   return (
     <g>
-      <text x={cx} y={cy - 10} textAnchor="middle" fill="#1f2937" style={{ fontSize: 26, fontWeight: 700 }}>{value}</text>
-      <text x={cx} y={cy + 18} textAnchor="middle" fill="#6b7280" style={{ fontSize: 13 }}>{payload.name}</text>
-      <text x={cx} y={cy + 36} textAnchor="middle" fill="#9ca3af" style={{ fontSize: 11 }}>{(percent * 100).toFixed(0)}%</text>
+      <text x={cx} y={cy - 10} textAnchor="middle" fill={fill} style={{ fontSize: 22, fontWeight: 700 }}>{value}</text>
+      <text x={cx} y={cy + 14} textAnchor="middle" fill="#9ca3af" style={{ fontSize: 12 }}>{payload.name}</text>
+      <text x={cx} y={cy + 30} textAnchor="middle" fill="#9ca3af" style={{ fontSize: 11 }}>{(percent * 100).toFixed(0)}%</text>
       <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 6} startAngle={startAngle} endAngle={endAngle} fill={fill} />
-      <Sector cx={cx} cy={cy} innerRadius={innerRadius - 4} outerRadius={innerRadius - 2} startAngle={startAngle} endAngle={endAngle} fill={fill} />
+      <Sector cx={cx} cy={cy} innerRadius={innerRadius - 4} outerRadius={innerRadius - 1} startAngle={startAngle} endAngle={endAngle} fill={fill} />
     </g>
   )
 }
 
-// ── StatCard ──────────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon: Icon, color, to }: {
-  label: string; value: number; icon: React.ElementType; color: string; to: string
-}) {
+// ── Default layout ────────────────────────────────────────────────────────────
+const DEFAULT_LAYOUTS: Layouts = {
+  lg: [
+    { i: 'stats',  x: 0,  y: 0, w: 12, h: 2, minH: 2, maxH: 2, isResizable: false },
+    { i: 'chart',  x: 0,  y: 2, w: 8,  h: 5, minH: 4 },
+    { i: 'donut',  x: 8,  y: 2, w: 4,  h: 5, minH: 4 },
+    { i: 'eventi', x: 0,  y: 7, w: 5,  h: 5, minH: 3 },
+    { i: 'contab', x: 5,  y: 7, w: 4,  h: 5, minH: 4, maxH: 5 },
+    { i: 'azioni', x: 9,  y: 7, w: 3,  h: 5, minH: 3 },
+  ],
+  md: [
+    { i: 'stats',  x: 0, y: 0,  w: 10, h: 2 },
+    { i: 'chart',  x: 0, y: 2,  w: 6,  h: 5 },
+    { i: 'donut',  x: 6, y: 2,  w: 4,  h: 5 },
+    { i: 'eventi', x: 0, y: 7,  w: 5,  h: 5 },
+    { i: 'contab', x: 5, y: 7,  w: 5,  h: 5 },
+    { i: 'azioni', x: 0, y: 12, w: 10, h: 3 },
+  ],
+  sm: [
+    { i: 'stats',  x: 0, y: 0,  w: 6, h: 4 },
+    { i: 'chart',  x: 0, y: 4,  w: 6, h: 5 },
+    { i: 'donut',  x: 0, y: 9,  w: 6, h: 5 },
+    { i: 'eventi', x: 0, y: 14, w: 6, h: 5 },
+    { i: 'contab', x: 0, y: 19, w: 6, h: 5 },
+    { i: 'azioni', x: 0, y: 24, w: 6, h: 3 },
+  ],
+}
+
+const LAYOUT_KEY = 'rechurch_dashboard_layout'
+
+function loadLayouts(): Layouts {
+  try {
+    const saved = localStorage.getItem(LAYOUT_KEY)
+    return saved ? JSON.parse(saved) : DEFAULT_LAYOUTS
+  } catch {
+    return DEFAULT_LAYOUTS
+  }
+}
+
+// ── Widget wrapper ────────────────────────────────────────────────────────────
+function Widget({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <Link to={to} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex items-center gap-5">
-      <div className={`p-4 rounded-xl ${color}`}><Icon size={26} className="text-white" /></div>
-      <div>
-        <p className="text-3xl font-bold text-gray-800">{value}</p>
-        <p className="text-gray-500 text-sm mt-0.5">{label}</p>
-      </div>
-    </Link>
+    <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-5 h-full flex flex-col ${className}`}>
+      {children}
+    </div>
   )
 }
 
-// ── Ricerca globale ───────────────────────────────────────────────────────────
-function ResultRow({ onClick, badge, badgeColor, title, sub }: {
-  onClick: () => void
-  badge: string
-  badgeColor: string
-  title: string
-  sub: string
-}) {
-  return (
-    <button
-      onMouseDown={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left transition-colors"
-    >
-      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${badgeColor}`}>
-        {badge}
-      </span>
-      <span className="flex-1 text-sm text-gray-800 font-medium truncate">{title}</span>
-      <span className="text-xs text-gray-400 flex-shrink-0">{sub}</span>
-      <ArrowRight size={13} className="text-gray-300 flex-shrink-0" />
-    </button>
-  )
-}
-
+// ── GlobalSearch ──────────────────────────────────────────────────────────────
 function GlobalSearch() {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
@@ -141,25 +130,21 @@ function GlobalSearch() {
   const clear = () => { setQuery(''); setOpen(false) }
 
   return (
-    <div ref={ref} className="relative w-full max-w-2xl">
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+    <div ref={ref} className="relative w-full max-w-md">
+      <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 bg-white shadow-sm">
+        <Search size={15} className="text-gray-400 flex-shrink-0" />
         <input
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
-          placeholder="Cerca per nome, cognome, luogo, ministro… (tutti i sacramenti)"
-          className="w-full pl-11 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 placeholder-gray-400"
+          placeholder="Cerca sacramenti…"
+          className="flex-1 text-sm outline-none bg-transparent text-gray-800 placeholder-gray-400"
         />
-        {query && (
-          <button onClick={clear} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-            <X size={16} />
-          </button>
-        )}
+        {query && <button onClick={clear}><X size={14} className="text-gray-400 hover:text-gray-600" /></button>}
       </div>
 
       {showDrop && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden max-h-96 overflow-y-auto">
+        <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden max-h-96 overflow-y-auto">
           {loading && total === 0 && (
             <p className="text-sm text-gray-400 text-center py-6">Ricerca in corso…</p>
           )}
@@ -167,55 +152,46 @@ function GlobalSearch() {
             <p className="text-sm text-gray-400 text-center py-6">Nessun risultato per "{dq}"</p>
           )}
 
-          {/* Battesimi */}
           {(rb?.length ?? 0) > 0 && (
-            <>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">Battesimi</p>
+            <div>
+              <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100"
+                style={{ borderLeft: `3px solid ${C.battesimi}` }}>Battesimi</div>
               {rb!.map((b: Battesimo) => (
-                <ResultRow
-                  key={`b-${b.id}`}
-                  onClick={() => { navigate(`/battesimi/${b.id}/modifica`); clear() }}
-                  badge="Battesimo"
-                  badgeColor="bg-blue-100 text-blue-700"
-                  title={`${b.nome} ${b.cognome}`}
-                  sub={b.data_battesimo}
-                />
+                <button key={b.id} onMouseDown={() => { navigate(`/battesimi/${b.id}/modifica`); clear() }}
+                  className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 flex items-center justify-between group">
+                  <span className="text-sm text-gray-800">{b.nome} {b.cognome}</span>
+                  <span className="text-xs text-gray-400 group-hover:text-indigo-400">{b.data_battesimo}</span>
+                </button>
               ))}
-            </>
+            </div>
           )}
 
-          {/* Cresime */}
           {(rc?.length ?? 0) > 0 && (
-            <>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">Cresime</p>
+            <div>
+              <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100"
+                style={{ borderLeft: `3px solid ${C.cresime}` }}>Cresime</div>
               {rc!.map((c: Cresima) => (
-                <ResultRow
-                  key={`c-${c.id}`}
-                  onClick={() => { navigate(`/cresime/${c.id}/modifica`); clear() }}
-                  badge="Cresima"
-                  badgeColor="bg-amber-100 text-amber-700"
-                  title={`${c.nome} ${c.cognome}`}
-                  sub={c.data_cresima}
-                />
+                <button key={c.id} onMouseDown={() => { navigate(`/cresime/${c.id}/modifica`); clear() }}
+                  className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 flex items-center justify-between group">
+                  <span className="text-sm text-gray-800">{c.nome} {c.cognome}</span>
+                  <span className="text-xs text-gray-400 group-hover:text-indigo-400">{c.data_cresima}</span>
+                </button>
               ))}
-            </>
+            </div>
           )}
 
-          {/* Matrimoni */}
           {(rm?.length ?? 0) > 0 && (
-            <>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">Matrimoni</p>
+            <div>
+              <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100"
+                style={{ borderLeft: `3px solid ${C.matrimoni}` }}>Matrimoni</div>
               {rm!.map((m: Matrimonio) => (
-                <ResultRow
-                  key={`m-${m.id}`}
-                  onClick={() => { navigate(`/matrimoni/${m.id}/modifica`); clear() }}
-                  badge="Matrimonio"
-                  badgeColor="bg-rose-100 text-rose-700"
-                  title={`${m.sposo_nome} ${m.sposo_cognome} + ${m.sposa_nome} ${m.sposa_cognome}`}
-                  sub={m.data_matrimonio}
-                />
+                <button key={m.id} onMouseDown={() => { navigate(`/matrimoni/${m.id}/modifica`); clear() }}
+                  className="w-full text-left px-4 py-2.5 hover:bg-indigo-50 flex items-center justify-between group">
+                  <span className="text-sm text-gray-800">{m.sposo_cognome} &amp; {m.sposa_cognome}</span>
+                  <span className="text-xs text-gray-400 group-hover:text-indigo-400">{m.data_matrimonio}</span>
+                </button>
               ))}
-            </>
+            </div>
           )}
 
           {total > 0 && (
@@ -234,246 +210,289 @@ function GlobalSearch() {
   )
 }
 
-// ── Granularity / chart type tabs ─────────────────────────────────────────────
-type Gran = 'mesi' | 'anni' | 'decenni'
-type ChartType = 'area' | 'bar'
-
-function Tab({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick}
-      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${active
-        ? 'bg-indigo-600 text-white shadow-sm'
-        : 'text-gray-500 hover:bg-gray-100'}`}>
-      {label}
-    </button>
-  )
-}
-
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [gran, setGran] = useState<Gran>('anni')
-  const [chartType, setChartType] = useState<ChartType>('area')
-  const [activeDonut, setActiveDonut] = useState(0)
+  const [granularity, setGranularity] = useState<'mesi' | 'anni' | 'decenni'>('anni')
+  const [chartType, setChartType] = useState<'area' | 'bar'>('area')
   const [dal, setDal] = useState('')
   const [al, setAl] = useState('')
+  const [activeDonut, setActiveDonut] = useState(0)
+  const [layouts, setLayouts] = useState<Layouts>(loadLayouts)
 
-  const { data: stats, isLoading } = useQuery({
+  const hasDateFilter = !!(dal || al)
+
+  const { data: stats } = useQuery({
     queryKey: ['stats', dal, al],
     queryFn: () => statsApi.get({ dal: dal || undefined, al: al || undefined }),
   })
 
-  const total = (stats?.battesimi ?? 0) + (stats?.cresime ?? 0) + (stats?.matrimoni ?? 0)
+  const { data: summary } = useQuery({
+    queryKey: ['dashboard-summary'],
+    queryFn: dashboardApi.summary,
+    staleTime: 60_000,
+  })
 
-  const serieRaw: StatsPeriod[] =
-    gran === 'mesi'    ? (stats?.per_mese     ?? []) :
-    gran === 'decenni' ? (stats?.per_decennio ?? []) :
-                         (stats?.per_anno     ?? [])
-
-  const serie = serieRaw.map(d => ({ ...d, label: fmtPeriodo(d.periodo, gran) }))
+  const chartData: StatsPeriod[] = granularity === 'mesi'
+    ? (stats?.per_mese ?? [])
+    : granularity === 'decenni'
+    ? (stats?.per_decennio ?? [])
+    : (stats?.per_anno ?? [])
 
   const donutData = [
     { name: 'Battesimi', value: stats?.battesimi ?? 0, color: C.battesimi },
-    { name: 'Cresime',   value: stats?.cresime   ?? 0, color: C.cresime },
+    { name: 'Cresime',   value: stats?.cresime ?? 0,   color: C.cresime },
     { name: 'Matrimoni', value: stats?.matrimoni ?? 0, color: C.matrimoni },
-  ].filter(d => d.value > 0)
+  ]
+  const total = donutData.reduce((s, d) => s + d.value, 0)
 
-  const hasDateFilter = dal || al
+  function resetLayout() {
+    setLayouts(DEFAULT_LAYOUTS)
+    localStorage.removeItem(LAYOUT_KEY)
+  }
 
-  return (
-    <div className="p-8">
+  function handleLayoutChange(_current: Layout[], allLayouts: Layouts) {
+    setLayouts(allLayouts)
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(allLayouts))
+  }
 
-      {/* Header + ricerca */}
-      <div className="mb-7">
-        <h1 className="text-2xl font-bold text-gray-800 mb-1">Dashboard</h1>
-        <p className="text-gray-500 text-sm mb-5">Panoramica e andamento dei sacramenti registrati</p>
-        <GlobalSearch />
-      </div>
-
-      {/* Stat cards */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-          {[...Array(4)].map((_, i) => <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-28 animate-pulse" />)}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-          <StatCard label="Battesimi" value={stats?.battesimi ?? 0} icon={Droplets} color="bg-blue-500"  to="/battesimi" />
-          <StatCard label="Cresime"   value={stats?.cresime   ?? 0} icon={Star}     color="bg-amber-500" to="/cresime" />
-          <StatCard label="Matrimoni" value={stats?.matrimoni ?? 0} icon={Heart}    color="bg-rose-500"  to="/matrimoni" />
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-5">
-            <div className="p-4 rounded-xl bg-indigo-500"><TrendingUp size={26} className="text-white" /></div>
-            <div>
-              <p className="text-3xl font-bold text-gray-800">{total}</p>
-              <p className="text-gray-500 text-sm mt-0.5">
-                Totale{hasDateFilter && <span className="text-indigo-500 ml-1">(filtrato)</span>}
-              </p>
-            </div>
+  // ── Stats widget content ──────────────────────────────────────────────────
+  const statsContent = (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 h-full">
+      {[
+        { label: 'Battesimi', value: summary?.sacramenti.battesimi ?? stats?.battesimi ?? 0, color: 'text-blue-600',   bg: 'bg-blue-50',   icon: Droplets, to: '/battesimi' },
+        { label: 'Cresime',   value: summary?.sacramenti.cresime   ?? stats?.cresime   ?? 0, color: 'text-amber-600', bg: 'bg-amber-50',  icon: Star,     to: '/cresime' },
+        { label: 'Matrimoni', value: summary?.sacramenti.matrimoni ?? stats?.matrimoni ?? 0, color: 'text-rose-600',  bg: 'bg-rose-50',   icon: Heart,    to: '/matrimoni' },
+        { label: 'Persone',   value: summary?.persone ?? 0,                                  color: 'text-indigo-600', bg: 'bg-indigo-50', icon: Users,    to: '/rubrica' },
+      ].map(({ label, value, color, bg, icon: Icon, to }) => (
+        <Link key={label} to={to}
+          className={`${bg} rounded-xl p-4 flex items-center gap-3 hover:opacity-90 transition-opacity`}>
+          <div className={`${color} ${bg} rounded-lg p-2`}>
+            <Icon size={20} className={color} />
           </div>
-        </div>
-      )}
-
-      {/* Grafico principale + Donut */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-
-        {/* Area / Bar chart */}
-        <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-
-          {/* Chart header */}
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
-            <div>
-              <h2 className="font-semibold text-gray-800">Andamento nel tempo</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Sacramenti registrati per periodo</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Chart type */}
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                {(['area', 'bar'] as const).map(t => (
-                  <button key={t} onClick={() => setChartType(t)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${chartType === t ? 'bg-white shadow-sm text-gray-700' : 'text-gray-400'}`}>
-                    {t === 'area' ? 'Area' : 'Barre'}
-                  </button>
-                ))}
-              </div>
-              {/* Granularity */}
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                <Tab active={gran === 'mesi'}    label="Mesi"    onClick={() => setGran('mesi')} />
-                <Tab active={gran === 'anni'}    label="Anni"    onClick={() => setGran('anni')} />
-                <Tab active={gran === 'decenni'} label="Decenni" onClick={() => setGran('decenni')} />
-              </div>
-            </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-800">{value.toLocaleString('it-IT')}</p>
+            <p className="text-sm text-gray-500">{label}</p>
           </div>
+        </Link>
+      ))}
+    </div>
+  )
 
-          {/* Date range filter */}
-          <div className="flex flex-wrap items-center gap-2 mb-5 p-3 bg-gray-50 rounded-xl border border-gray-100">
-            <CalendarRange size={15} className="text-gray-400 flex-shrink-0" />
-            <span className="text-xs text-gray-500 font-medium">Periodo:</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-400">Dal</span>
-              <input
-                type="date"
-                value={dal}
-                onChange={e => setDal(e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-              />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-400">Al</span>
-              <input
-                type="date"
-                value={al}
-                onChange={e => setAl(e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-              />
-            </div>
-            {hasDateFilter && (
-              <button onClick={() => { setDal(''); setAl('') }}
-                className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 ml-1 font-medium">
-                <X size={12} /> Reset
+  // ── Chart widget content ──────────────────────────────────────────────────
+  const chartContent = (
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex border border-gray-200 rounded-lg overflow-hidden text-xs">
+            {(['mesi', 'anni', 'decenni'] as const).map(g => (
+              <button key={g} onClick={() => setGranularity(g)}
+                className={`px-3 py-1.5 font-medium transition-colors ${granularity === g ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                {g.charAt(0).toUpperCase() + g.slice(1)}
               </button>
-            )}
-            {hasDateFilter && (
-              <span className="ml-auto text-xs text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded-full">
-                Filtro attivo
-              </span>
-            )}
+            ))}
           </div>
-
-          {serie.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-gray-300 text-sm">
-              Nessun dato nel periodo selezionato
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              {chartType === 'area' ? (
-                <AreaChart data={serie} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    {(['battesimi','cresime','matrimoni'] as const).map(k => (
-                      <linearGradient key={k} id={`g-${k}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor={C[k]} stopOpacity={0.18} />
-                        <stop offset="95%" stopColor={C[k]} stopOpacity={0} />
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-                  <Area type="monotone" dataKey="battesimi" stroke={C.battesimi} strokeWidth={2} fill="url(#g-battesimi)" dot={serie.length < 15} />
-                  <Area type="monotone" dataKey="cresime"   stroke={C.cresime}   strokeWidth={2} fill="url(#g-cresime)"   dot={serie.length < 15} />
-                  <Area type="monotone" dataKey="matrimoni" stroke={C.matrimoni} strokeWidth={2} fill="url(#g-matrimoni)" dot={serie.length < 15} />
-                </AreaChart>
-              ) : (
-                <BarChart data={serie} margin={{ top: 5, right: 10, left: -20, bottom: 0 }} barCategoryGap="30%">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f9fafb' }} />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="battesimi" fill={C.battesimi} radius={[4,4,0,0]} />
-                  <Bar dataKey="cresime"   fill={C.cresime}   radius={[4,4,0,0]} />
-                  <Bar dataKey="matrimoni" fill={C.matrimoni} radius={[4,4,0,0]} />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          )}
+          <div className="flex border border-gray-200 rounded-lg overflow-hidden text-xs">
+            <button onClick={() => setChartType('area')} className={`px-3 py-1.5 font-medium ${chartType === 'area' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>Area</button>
+            <button onClick={() => setChartType('bar')}  className={`px-3 py-1.5 font-medium ${chartType === 'bar'  ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>Barre</button>
+          </div>
         </div>
-
-        {/* Donut */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="mb-5">
-            <h2 className="font-semibold text-gray-800">Distribuzione</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {hasDateFilter ? 'Nel periodo filtrato' : 'Composizione del totale'}
-            </p>
-          </div>
-          {donutData.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-gray-300 text-sm">Nessun dato</div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={210}>
-                <PieChart>
-                  {/* @ts-expect-error recharts v3 activeIndex type */}
-                  <Pie activeIndex={activeDonut} activeShape={ActiveShape}
-                    data={donutData} cx="50%" cy="50%"
-                    innerRadius={65} outerRadius={88} dataKey="value"
-                    onMouseEnter={(_, i) => setActiveDonut(i)}>
-                    {donutData.map((d, i) => <Cell key={i} fill={d.color} stroke="none" />)}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-col gap-2 mt-1">
-                {donutData.map(d => (
-                  <div key={d.name} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
-                      <span className="text-gray-600">{d.name}</span>
-                    </div>
-                    <span className="font-semibold text-gray-800">
-                      {d.value}
-                      <span className="text-gray-400 font-normal ml-1 text-xs">
-                        ({total > 0 ? Math.round(d.value / total * 100) : 0}%)
-                      </span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </>
+        <div className="flex items-center gap-2 text-xs">
+          <CalendarRange size={14} className="text-gray-400" />
+          <input type="date" value={dal} onChange={e => setDal(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          <span className="text-gray-400">—</span>
+          <input type="date" value={al} onChange={e => setAl(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          {hasDateFilter && (
+            <button onClick={() => { setDal(''); setAl('') }}
+              className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors" title="Rimuovi filtro">
+              <X size={14} />
+            </button>
           )}
         </div>
       </div>
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          {chartType === 'area' ? (
+            <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <defs>
+                {(['battesimi', 'cresime', 'matrimoni'] as const).map(k => (
+                  <linearGradient key={k} id={`grad-${k}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={C[k]} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={C[k]} stopOpacity={0.02} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              {(['battesimi', 'cresime', 'matrimoni'] as const).map(k => (
+                <Area key={k} type="monotone" dataKey={k} name={k.charAt(0).toUpperCase() + k.slice(1)}
+                  stroke={C[k]} fill={`url(#grad-${k})`} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              ))}
+            </AreaChart>
+          ) : (
+            <BarChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              {(['battesimi', 'cresime', 'matrimoni'] as const).map(k => (
+                <Bar key={k} dataKey={k} name={k.charAt(0).toUpperCase() + k.slice(1)}
+                  fill={C[k]} radius={[3, 3, 0, 0]} />
+              ))}
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
 
-      {/* Azioni rapide */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  // ── Donut widget content ──────────────────────────────────────────────────
+  const donutContent = (
+    <div className="h-full flex flex-col">
+      <div className="mb-2">
+        <h3 className="font-semibold text-gray-800 text-sm">Distribuzione</h3>
+        <p className="text-xs text-gray-400 mt-0.5">{hasDateFilter ? 'Nel periodo filtrato' : 'Totale complessivo'}</p>
+      </div>
+      {total === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-gray-300 text-sm">Nessun dato</div>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={180}>
+            <PieChart>
+              {/* @ts-expect-error recharts v3 activeIndex type */}
+              <Pie activeIndex={activeDonut} activeShape={ActiveShape}
+                data={donutData} cx="50%" cy="50%"
+                innerRadius={55} outerRadius={78} dataKey="value"
+                onMouseEnter={(_: unknown, i: number) => setActiveDonut(i)}>
+                {donutData.map((d, i) => <Cell key={i} fill={d.color} stroke="none" />)}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="space-y-2 mt-1">
+            {donutData.map(d => (
+              <div key={d.name} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
+                  <span className="text-gray-600 text-xs">{d.name}</span>
+                </div>
+                <span className="font-semibold text-gray-800 text-sm">
+                  {d.value}
+                  <span className="text-gray-400 font-normal ml-1 text-xs">
+                    ({total > 0 ? Math.round(d.value / total * 100) : 0}%)
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+
+  // ── Azioni rapide ─────────────────────────────────────────────────────────
+  const azioniContent = (
+    <div className="h-full flex flex-col">
+      <h3 className="font-semibold text-gray-800 text-sm mb-3">Azioni rapide</h3>
+      <div className="space-y-2 flex-1">
         {[
-          { label: 'Aggiungi Battesimo', to: '/battesimi/nuovo', color: 'text-blue-600 bg-blue-50 hover:bg-blue-100', icon: Droplets },
-          { label: 'Aggiungi Cresima',   to: '/cresime/nuovo',   color: 'text-amber-600 bg-amber-50 hover:bg-amber-100', icon: Star },
-          { label: 'Aggiungi Matrimonio',to: '/matrimoni/nuovo', color: 'text-rose-600 bg-rose-50 hover:bg-rose-100',   icon: Heart },
-        ].map(({ label, to, color }) => (
-          <Link key={to} to={to} className={`flex items-center justify-center gap-2 rounded-xl p-4 font-medium text-sm transition-colors ${color}`}>
-            <Plus size={16} /> {label}
+          { label: 'Battesimo',  to: '/battesimi/nuovo',         color: 'text-blue-600 bg-blue-50 hover:bg-blue-100',     icon: Droplets },
+          { label: 'Cresima',    to: '/cresime/nuovo',           color: 'text-amber-600 bg-amber-50 hover:bg-amber-100',  icon: Star },
+          { label: 'Matrimonio', to: '/matrimoni/nuovo',         color: 'text-rose-600 bg-rose-50 hover:bg-rose-100',     icon: Heart },
+          { label: 'Persona',    to: '/rubrica/persone/nuova',   color: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100', icon: Users },
+        ].map(({ label, to, color, icon: Icon }) => (
+          <Link key={to} to={to} className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${color}`}>
+            <Icon size={16} /> <span>Nuovo {label}</span>
+            <ArrowRight size={14} className="ml-auto" />
           </Link>
         ))}
       </div>
+    </div>
+  )
+
+  return (
+    <div className="p-6 min-h-screen bg-gray-50">
+      {/* Top bar */}
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Panoramica parrocchiale</p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <GlobalSearch />
+          <button onClick={resetLayout} title="Ripristina layout"
+            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-gray-200">
+            <RotateCcw size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Draggable grid */}
+      <RGL
+        className="layout"
+        layouts={layouts}
+        onLayoutChange={handleLayoutChange}
+        breakpoints={{ lg: 1200, md: 996, sm: 768 }}
+        cols={{ lg: 12, md: 10, sm: 6 }}
+        rowHeight={60}
+        margin={[16, 16]}
+        draggableHandle=".drag-handle"
+        isResizable={true}
+      >
+        <div key="stats">
+          <Widget>{statsContent}</Widget>
+        </div>
+
+        <div key="chart">
+          <Widget>
+            <div className="drag-handle flex items-center gap-2 mb-2 cursor-grab active:cursor-grabbing">
+              <GripVertical size={14} className="text-gray-300" />
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Andamento</span>
+            </div>
+            {chartContent}
+          </Widget>
+        </div>
+
+        <div key="donut">
+          <Widget>
+            <div className="drag-handle flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing">
+              <GripVertical size={14} className="text-gray-300" />
+            </div>
+            {donutContent}
+          </Widget>
+        </div>
+
+        <div key="eventi">
+          <Widget>
+            <div className="drag-handle flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing">
+              <GripVertical size={14} className="text-gray-300" />
+            </div>
+            <ProssimiEventiWidget />
+          </Widget>
+        </div>
+
+        <div key="contab">
+          <Widget>
+            <div className="drag-handle flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing">
+              <GripVertical size={14} className="text-gray-300" />
+            </div>
+            <ContabilitaMeseWidget />
+          </Widget>
+        </div>
+
+        <div key="azioni">
+          <Widget>
+            <div className="drag-handle flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing">
+              <GripVertical size={14} className="text-gray-300" />
+            </div>
+            {azioniContent}
+          </Widget>
+        </div>
+      </RGL>
     </div>
   )
 }

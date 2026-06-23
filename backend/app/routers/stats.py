@@ -67,3 +67,55 @@ def get_stats(
     per_decennio = sorted(decenni.values(), key=lambda x: x["periodo"])
 
     return {**totals, "per_anno": per_anno, "per_mese": per_mese, "per_decennio": per_decennio}
+
+
+@router.get("/dashboard/")
+def dashboard_summary(
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
+    """Single endpoint returning all dashboard summary data."""
+    from datetime import date
+    from calendar import monthrange
+
+    oggi = date.today()
+    primo_mese = oggi.replace(day=1)
+    ultimo_mese = oggi.replace(day=monthrange(oggi.year, oggi.month)[1])
+
+    # Sacrament totals
+    tot_battesimi = db.query(models.Battesimo).count()
+    tot_cresime = db.query(models.Cresima).count()
+    tot_matrimoni = db.query(models.Matrimonio).count()
+
+    # Persone (rubrica)
+    try:
+        tot_persone = db.query(models.Persona).count()
+    except Exception:
+        tot_persone = 0
+
+    # Contabilità this month
+    try:
+        movimenti_mese = db.query(models.MovimentoContabile).filter(
+            models.MovimentoContabile.data >= primo_mese,
+            models.MovimentoContabile.data <= ultimo_mese,
+        ).all()
+        entrate_mese = sum(float(m.importo) for m in movimenti_mese if m.tipo == 'entrata')
+        uscite_mese = sum(float(m.importo) for m in movimenti_mese if m.tipo == 'uscita')
+    except Exception:
+        entrate_mese = 0.0
+        uscite_mese = 0.0
+
+    return {
+        "sacramenti": {
+            "battesimi": tot_battesimi,
+            "cresime": tot_cresime,
+            "matrimoni": tot_matrimoni,
+        },
+        "persone": tot_persone,
+        "contabilita_mese": {
+            "mese": oggi.strftime("%B %Y"),
+            "entrate": round(entrate_mese, 2),
+            "uscite": round(uscite_mese, 2),
+            "saldo": round(entrate_mese - uscite_mese, 2),
+        },
+    }

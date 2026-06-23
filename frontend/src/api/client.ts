@@ -438,4 +438,12 @@ export const scadenziarioApi = {
     api.get<Evento[]>('/scadenziario/prossimi/', { params: giorni ? { giorni } : {} }).then(r => r.data),
 }
 
+export const dashboardApi = {
+  summary: () => api.get<{
+    sacramenti: { battesimi: number; cresime: number; matrimoni: number }
+    persone: number
+    contabilita_mese: { mese: string; entrate: number; uscite: number; saldo: number }
+  }>('/stats/dashboard/').then(r => r.data),
+}
+
 export default api
