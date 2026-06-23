@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.db
+*.db-shm
+*.db-wal
+*.accdb
+
+# Environment
+.env
+!.env.example
+
+# Node
+node_modules/
+dist/
+
+# Local tooling
+.agents/
+.claude/
+
+# Build output
+backend/build/
+installer/Output/
+*.zip
+*.exe
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store

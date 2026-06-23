@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Foglio certificato (stile A4) ─────────────────────────────────────────── */
+.certificate-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  max-width: 100%;
+}
+
+/* ─── Stampa ────────────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html, body {
+    background: white !important;
+  }
+
+  /* Nasconde tutto ciò che ha .no-print (toolbar, sidebar, etc.) */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Foglio senza ombra né margini extra in stampa */
+  .certificate-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100%;
+    min-height: auto;
+  }
+}
