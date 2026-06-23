@@ -216,3 +216,82 @@ class MatrimonioResponse(MatrimonioBase):
     updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+# ─── Rubrica ──────────────────────────────────────────────────────────────────
+
+class FamigliaBase(BaseModel):
+    cognome: str
+    indirizzo: Optional[str] = None
+    cap: Optional[str] = None
+    citta: Optional[str] = None
+    telefono: Optional[str] = None
+    note: Optional[str] = None
+
+class FamigliaCreate(FamigliaBase):
+    pass
+
+class FamigliaUpdate(BaseModel):
+    cognome: Optional[str] = None
+    indirizzo: Optional[str] = None
+    cap: Optional[str] = None
+    citta: Optional[str] = None
+    telefono: Optional[str] = None
+    note: Optional[str] = None
+
+class FamigliaResponse(FamigliaBase):
+    id: int
+    num_persone: int = 0
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+
+class PersonaBase(BaseModel):
+    nome: str
+    cognome: str
+    sesso: Optional[str] = None
+    data_nascita: Optional[date] = None
+    luogo_nascita: Optional[str] = None
+    indirizzo: Optional[str] = None
+    cap: Optional[str] = None
+    citta: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    famiglia_id: Optional[int] = None
+    note: Optional[str] = None
+
+class PersonaCreate(PersonaBase):
+    pass
+
+class PersonaUpdate(BaseModel):
+    nome: Optional[str] = None
+    cognome: Optional[str] = None
+    sesso: Optional[str] = None
+    data_nascita: Optional[date] = None
+    luogo_nascita: Optional[str] = None
+    indirizzo: Optional[str] = None
+    cap: Optional[str] = None
+    citta: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    famiglia_id: Optional[int] = None
+    note: Optional[str] = None
+
+class PersonaSacramentoLink(BaseModel):
+    tipo: str  # battesimo | cresima | matrimonio
+    sacramento_id: int
+    ruolo: Optional[str] = None  # sposo | sposa
+
+class PersonaResponse(PersonaBase):
+    id: int
+    famiglia_cognome: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+class PersonaDetail(PersonaResponse):
+    battesimo: Optional["BattesimoResponse"] = None
+    cresima: Optional["CresimaResponse"] = None
+    matrimonio: Optional["MatrimonioResponse"] = None
+    ruolo_matrimonio: Optional[str] = None

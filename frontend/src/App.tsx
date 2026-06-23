@@ -13,6 +13,10 @@ import MatrimonioForm from './pages/matrimoni/MatrimonioForm'
 import ImportaDati from './pages/ImportaDati'
 import Impostazioni from './pages/Impostazioni'
 import Utenti from './pages/Utenti'
+import RubricaList from './pages/rubrica/RubricaList'
+import PersonaForm from './pages/rubrica/PersonaForm'
+import PersonaDetail from './pages/rubrica/PersonaDetail'
+import FamigliaDetail from './pages/rubrica/FamigliaDetail'
 
 export default function App() {
   return (
@@ -40,6 +44,11 @@ export default function App() {
           <Route path="matrimoni/nuovo" element={<MatrimonioForm />} />
           <Route path="matrimoni/:id/modifica" element={<MatrimonioForm />} />
           <Route path="importa" element={<ImportaDati />} />
+          <Route path="rubrica" element={<RubricaList />} />
+          <Route path="rubrica/persone/nuova" element={<PersonaForm />} />
+          <Route path="rubrica/persone/:id" element={<PersonaDetail />} />
+          <Route path="rubrica/persone/:id/modifica" element={<PersonaForm />} />
+          <Route path="rubrica/famiglie/:id" element={<FamigliaDetail />} />
           <Route path="impostazioni" element={<Impostazioni />} />
           <Route
             path="utenti"

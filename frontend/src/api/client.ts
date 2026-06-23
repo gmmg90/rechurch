@@ -247,4 +247,65 @@ export const backupApi = {
   downloadUrl: (filename: string) => `/api/backup/${filename}`,
 }
 
+export interface Famiglia {
+  id: number
+  cognome: string
+  indirizzo?: string
+  cap?: string
+  citta?: string
+  telefono?: string
+  note?: string
+  num_persone?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Persona {
+  id: number
+  nome: string
+  cognome: string
+  sesso?: string
+  data_nascita?: string
+  luogo_nascita?: string
+  indirizzo?: string
+  cap?: string
+  citta?: string
+  telefono?: string
+  email?: string
+  famiglia_id?: number
+  famiglia_cognome?: string
+  note?: string
+  created_at?: string
+  updated_at?: string
+  // from PersonaDetail
+  battesimo?: Battesimo
+  cresima?: Cresima
+  matrimonio?: Matrimonio
+  ruolo_matrimonio?: string
+}
+
+export const rubricaApi = {
+  listPersone: (params?: { search?: string; famiglia_id?: number; skip?: number; limit?: number }) =>
+    api.get<Persona[]>('/rubrica/persone/', { params }).then(r => r.data),
+  getPersona: (id: number) => api.get<Persona>(`/rubrica/persone/${id}`).then(r => r.data),
+  createPersona: (data: Omit<Persona, 'id' | 'created_at' | 'updated_at' | 'famiglia_cognome' | 'battesimo' | 'cresima' | 'matrimonio' | 'ruolo_matrimonio'>) =>
+    api.post<Persona>('/rubrica/persone/', data).then(r => r.data),
+  updatePersona: (id: number, data: Partial<Omit<Persona, 'famiglia_id'>> & { famiglia_id?: number | null }) =>
+    api.put<Persona>(`/rubrica/persone/${id}`, data).then(r => r.data),
+  deletePersona: (id: number) => api.delete(`/rubrica/persone/${id}`),
+  linkSacramento: (personaId: number, tipo: string, sacramento_id: number, ruolo?: string) =>
+    api.post(`/rubrica/persone/${personaId}/sacramento`, { tipo, sacramento_id, ruolo }).then(r => r.data),
+  unlinkSacramento: (personaId: number, tipo: string) =>
+    api.delete(`/rubrica/persone/${personaId}/sacramento/${tipo}`).then(r => r.data),
+
+  listFamiglie: (params?: { search?: string; skip?: number; limit?: number }) =>
+    api.get<Famiglia[]>('/rubrica/famiglie/', { params }).then(r => r.data),
+  getFamiglia: (id: number) => api.get<Famiglia & { persone: Persona[] }>(`/rubrica/famiglie/${id}`).then(r => r.data),
+  createFamiglia: (data: Omit<Famiglia, 'id' | 'created_at' | 'updated_at' | 'num_persone'>) =>
+    api.post<Famiglia>('/rubrica/famiglie/', data).then(r => r.data),
+  updateFamiglia: (id: number, data: Partial<Famiglia>) =>
+    api.put<Famiglia>(`/rubrica/famiglie/${id}`, data).then(r => r.data),
+  deleteFamiglia: (id: number) => api.delete(`/rubrica/famiglie/${id}`),
+}
+
 export default api

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, Integer, String, Date, DateTime, Text
+from sqlalchemy import Boolean, Column, Integer, String, Date, DateTime, Text, ForeignKey
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -98,3 +98,45 @@ class Matrimonio(Base):
     note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Famiglia(Base):
+    __tablename__ = "famiglie"
+    id = Column(Integer, primary_key=True, index=True)
+    cognome = Column(String(100), nullable=False)
+    indirizzo = Column(String(300), nullable=True)
+    cap = Column(String(10), nullable=True)
+    citta = Column(String(100), nullable=True)
+    telefono = Column(String(50), nullable=True)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Persona(Base):
+    __tablename__ = "persone"
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False)
+    cognome = Column(String(100), nullable=False)
+    sesso = Column(String(1), nullable=True)  # M/F
+    data_nascita = Column(Date, nullable=True)
+    luogo_nascita = Column(String(200), nullable=True)
+    indirizzo = Column(String(300), nullable=True)
+    cap = Column(String(10), nullable=True)
+    citta = Column(String(100), nullable=True)
+    telefono = Column(String(50), nullable=True)
+    email = Column(String(200), nullable=True)
+    famiglia_id = Column(Integer, ForeignKey("famiglie.id", ondelete="SET NULL"), nullable=True)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class PersonaSacramento(Base):
+    __tablename__ = "persona_sacramenti"
+    id = Column(Integer, primary_key=True, index=True)
+    persona_id = Column(Integer, ForeignKey("persone.id", ondelete="CASCADE"), nullable=False)
+    tipo = Column(String(20), nullable=False)  # battesimo | cresima | matrimonio
+    sacramento_id = Column(Integer, nullable=False)
+    ruolo = Column(String(20), nullable=True)  # sposo | sposa (only for matrimonio)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
