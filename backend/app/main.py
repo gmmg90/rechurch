@@ -20,7 +20,7 @@ from app.routers import scadenziario as scadenziario_router
 app = FastAPI(
     title="ReChurch API",
     description="Gestione certificati ecclesiastici",
-    version="1.0.0",
+    version="2.0.0",
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ def on_shutdown():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.get("/")
 def root():
-    return {"message": "ReChurch API", "version": "1.0.0"}
+    return {"message": "ReChurch API", "version": "2.0.0"}
 
 
 @app.get("/health")

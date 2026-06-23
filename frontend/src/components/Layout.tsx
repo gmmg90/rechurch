@@ -108,7 +108,7 @@ export default function Layout() {
             Esci
           </button>
 
-          <p className="text-indigo-500 text-xs px-1">ReChurch v1.0</p>
+          <p className="text-indigo-500 text-xs px-1">ReChurch v2.0</p>
         </div>
       </aside>
 
