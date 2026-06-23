@@ -93,11 +93,10 @@ _scheduler.add_job(_run_scheduled_backup, "cron", hour=2, minute=0)
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
-    # Create default admin user if no users exist
     db = SessionLocal()
     try:
-        count = db.query(models.Utente).count()
-        if count == 0:
+        # Create default admin user if no users exist
+        if db.query(models.Utente).count() == 0:
             admin = models.Utente(
                 nome="Admin",
                 cognome="Parrocchia",
@@ -113,6 +112,22 @@ def on_startup():
                 "⚠️  Nessun utente trovato. Creato utente admin: "
                 "admin@parrocchia.it / admin123 — CAMBIA LA PASSWORD!\n"
             )
+
+        # Seed moduli (idempotent — only adds missing ones)
+        _MODULI_DEFAULT = [
+            {"codice": "battesimi",   "nome": "Battesimi",         "descrizione": "Registro dei battesimi con generazione PDF dei certificati", "icona": "Droplets",    "ordine": 1},
+            {"codice": "cresime",     "nome": "Cresime",           "descrizione": "Registro delle cresime con generazione PDF dei certificati", "icona": "Star",        "ordine": 2},
+            {"codice": "matrimoni",   "nome": "Matrimoni",         "descrizione": "Registro dei matrimoni con generazione PDF dei certificati", "icona": "Heart",       "ordine": 3},
+            {"codice": "rubrica",     "nome": "Rubrica Anime",     "descrizione": "Gestione famiglie e persone della parrocchia",               "icona": "BookOpen",    "ordine": 4},
+            {"codice": "contabilita", "nome": "Contabilità",       "descrizione": "Entrate, uscite, categorie, fornitori ed export Excel",      "icona": "Wallet",      "ordine": 5},
+            {"codice": "scadenziario","nome": "Scadenziario",      "descrizione": "Calendario eventi con ricorrenze",                           "icona": "CalendarDays","ordine": 6},
+            {"codice": "scanner",     "nome": "Scanner Documenti", "descrizione": "Scansione di ricevute e documenti da allegare ai movimenti", "icona": "ScanLine",   "ordine": 7},
+            {"codice": "importa",     "nome": "Importa Dati",      "descrizione": "Importa dati da file CSV o MDB (Access)",                   "icona": "Upload",      "ordine": 8},
+        ]
+        for m in _MODULI_DEFAULT:
+            if not db.query(models.ModuloConfig).filter_by(codice=m["codice"]).first():
+                db.add(models.ModuloConfig(**m))
+        db.commit()
     finally:
         db.close()
 

@@ -150,6 +150,8 @@ export const matrimoniApi = {
   update: (id: number, data: Partial<Matrimonio>) =>
     api.put<Matrimonio>(`/matrimoni/${id}`, data).then(r => r.data),
   delete: (id: number) => api.delete(`/matrimoni/${id}`),
+  anniversariProssimi: (giorni = 30) =>
+    api.get<Anniversario[]>('/matrimoni/anniversari-prossimi/', { params: { giorni } }).then(r => r.data),
 }
 
 export const statsApi = {
@@ -172,6 +174,48 @@ export interface ParrocchiaConfig {
   updated_at?: string
 }
 
+export interface ModuloConfig {
+  id: number
+  codice: string
+  nome: string
+  descrizione?: string
+  icona?: string
+  attivo: boolean
+  ordine: number
+}
+
+export interface SistemaStats {
+  versione: string
+  db_size_mb: number
+  totale_utenti: number
+  totale_battesimi: number
+  totale_cresime: number
+  totale_matrimoni: number
+  totale_persone: number
+  totale_movimenti: number
+  ultimo_backup?: string
+}
+
+export interface Compleanno {
+  id: number
+  nome: string
+  cognome: string
+  data_nascita: string
+  giorni_mancanti: number
+  eta: number
+  data_compleanno: string
+}
+
+export interface Anniversario {
+  id: number
+  sposo: string
+  sposa: string
+  data_matrimonio: string
+  giorni_mancanti: number
+  anni: number
+  data_anniversario: string
+}
+
 export const configApi = {
   get: () => api.get<ParrocchiaConfig>('/config/').then(r => r.data),
   update: (data: Partial<Omit<ParrocchiaConfig, 'id' | 'logo_path' | 'updated_at'>>) =>
@@ -183,6 +227,10 @@ export const configApi = {
       { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
   },
   deleteLogo: () => api.delete('/config/logo'),
+  getModuli: () => api.get<ModuloConfig[]>('/config/moduli/').then(r => r.data),
+  updateModulo: (codice: string, attivo: boolean) =>
+    api.put<ModuloConfig>(`/config/moduli/${codice}`, { attivo }).then(r => r.data),
+  getSistema: () => api.get<SistemaStats>('/config/sistema/').then(r => r.data),
 }
 
 export const pdfApi = {
@@ -321,6 +369,8 @@ export const rubricaApi = {
   updateFamiglia: (id: number, data: Partial<Famiglia>) =>
     api.put<Famiglia>(`/rubrica/famiglie/${id}`, data).then(r => r.data),
   deleteFamiglia: (id: number) => api.delete(`/rubrica/famiglie/${id}`),
+  complegenniProssimi: (giorni = 30) =>
+    api.get<Compleanno[]>('/rubrica/persone/compleanni-prossimi/', { params: { giorni } }).then(r => r.data),
 }
 
 export interface CategoriaContabile {

@@ -445,3 +445,33 @@ class EventoResponse(EventoBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     model_config = {"from_attributes": True}
+
+
+# ─── Moduli ───────────────────────────────────────────────────────────────────
+
+class ModuloConfigResponse(BaseModel):
+    id: int
+    codice: str
+    nome: str
+    descrizione: Optional[str] = None
+    icona: Optional[str] = None
+    attivo: bool
+    ordine: int
+    model_config = {"from_attributes": True}
+
+class ModuloConfigUpdate(BaseModel):
+    attivo: bool
+
+
+# ─── Sistema ──────────────────────────────────────────────────────────────────
+
+class SistemaStats(BaseModel):
+    versione: str
+    db_size_mb: float
+    totale_utenti: int
+    totale_battesimi: int
+    totale_cresime: int
+    totale_matrimoni: int
+    totale_persone: int
+    totale_movimenti: int
+    ultimo_backup: Optional[str] = None

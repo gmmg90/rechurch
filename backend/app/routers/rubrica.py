@@ -290,3 +290,54 @@ def delete_famiglia(
     )
     db.delete(fam)
     db.commit()
+
+
+# ─── Compleanni prossimi ──────────────────────────────────────────────────────
+
+@router.get("/persone/compleanni-prossimi/")
+def compleanni_prossimi(
+    giorni: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db),
+    _: models.Persona = Depends(get_current_user),
+):
+    from datetime import date, timedelta
+    today = date.today()
+    fine = today + timedelta(days=giorni)
+
+    persone = (
+        db.query(models.Persona)
+        .filter(models.Persona.data_nascita.isnot(None))
+        .all()
+    )
+
+    risultati = []
+    for p in persone:
+        bd = p.data_nascita
+        try:
+            this_year = bd.replace(year=today.year)
+        except ValueError:
+            this_year = bd.replace(year=today.year, day=28)
+
+        if this_year < today:
+            try:
+                prossimo = bd.replace(year=today.year + 1)
+            except ValueError:
+                prossimo = bd.replace(year=today.year + 1, day=28)
+        else:
+            prossimo = this_year
+
+        days_until = (prossimo - today).days
+        if 0 <= days_until <= giorni:
+            eta = today.year - bd.year + (1 if prossimo.year > today.year else 0)
+            risultati.append({
+                "id": p.id,
+                "nome": p.nome,
+                "cognome": p.cognome,
+                "data_nascita": bd.isoformat(),
+                "giorni_mancanti": days_until,
+                "eta": eta,
+                "data_compleanno": prossimo.isoformat(),
+            })
+
+    risultati.sort(key=lambda x: x["giorni_mancanti"])
+    return risultati

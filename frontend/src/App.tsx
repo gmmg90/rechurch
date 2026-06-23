@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ModuliProvider } from './contexts/ModuliContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -20,8 +21,9 @@ import FamigliaDetail from './pages/rubrica/FamigliaDetail'
 import ContabilitaList from './pages/contabilita/ContabilitaList'
 import MovimentoForm from './pages/contabilita/MovimentoForm'
 import ScadenziarioPage from './pages/scadenziario/ScadenziarioPage'
-import NotFound from './pages/NotFound'
 import Scanner from './pages/Scanner'
+import Amministrazione from './pages/Amministrazione'
+import NotFound from './pages/NotFound'
 
 export default function App() {
   return (
@@ -34,7 +36,9 @@ export default function App() {
         <Route
           element={
             <ProtectedRoute>
-              <Layout />
+              <ModuliProvider>
+                <Layout />
+              </ModuliProvider>
             </ProtectedRoute>
           }
         >
@@ -65,6 +69,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['admin']}>
                 <Utenti />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="amministrazione"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <Amministrazione />
               </ProtectedRoute>
             }
           />

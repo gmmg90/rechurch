@@ -96,3 +96,56 @@ def delete_matrimonio(
         raise HTTPException(status_code=404, detail="Matrimonio non trovato")
     db.delete(obj)
     db.commit()
+
+
+# ─── Anniversari prossimi ─────────────────────────────────────────────────────
+
+@router.get("/anniversari-prossimi/")
+def anniversari_prossimi(
+    giorni: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
+    from datetime import date, timedelta
+    today = date.today()
+
+    matrimoni = (
+        db.query(models.Matrimonio)
+        .filter(models.Matrimonio.data_matrimonio.isnot(None))
+        .all()
+    )
+
+    risultati = []
+    for m in matrimoni:
+        dm = m.data_matrimonio
+        try:
+            this_year = dm.replace(year=today.year)
+        except (ValueError, AttributeError):
+            continue
+
+        prossimo = this_year if this_year >= today else (
+            dm.replace(year=today.year + 1) if True else None
+        )
+        try:
+            if this_year < today:
+                prossimo = dm.replace(year=today.year + 1)
+            else:
+                prossimo = this_year
+        except ValueError:
+            continue
+
+        days_until = (prossimo - today).days
+        if 0 <= days_until <= giorni:
+            anni = today.year - dm.year + (1 if prossimo.year > today.year else 0)
+            risultati.append({
+                "id": m.id,
+                "sposo": f"{m.nome_sposo} {m.cognome_sposo}",
+                "sposa": f"{m.nome_sposa} {m.cognome_sposa}",
+                "data_matrimonio": dm.isoformat(),
+                "giorni_mancanti": days_until,
+                "anni": anni,
+                "data_anniversario": prossimo.isoformat(),
+            })
+
+    risultati.sort(key=lambda x: x["giorni_mancanti"])
+    return risultati

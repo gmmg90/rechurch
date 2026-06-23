@@ -208,3 +208,14 @@ class Evento(Base):
     note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class ModuloConfig(Base):
+    __tablename__ = "moduli_config"
+    id = Column(Integer, primary_key=True, index=True)
+    codice = Column(String(50), unique=True, nullable=False, index=True)
+    nome = Column(String(100), nullable=False)
+    descrizione = Column(Text, nullable=True)
+    icona = Column(String(50), nullable=True)
+    attivo = Column(Boolean, default=True, nullable=False)
+    ordine = Column(Integer, default=0, nullable=False)

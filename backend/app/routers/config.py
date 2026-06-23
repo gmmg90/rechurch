@@ -1,11 +1,13 @@
 import os
 import shutil
+from pathlib import Path
+from typing import List
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models, schemas
-from app.auth import get_current_user
+from app.auth import get_current_user, require_roles
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -77,3 +79,62 @@ def delete_logo(
     config.logo_path = None
     db.commit()
     return {"ok": True}
+
+
+# ─── Moduli ───────────────────────────────────────────────────────────────────
+
+@router.get("/moduli/", response_model=List[schemas.ModuloConfigResponse])
+def list_moduli(
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
+    return db.query(models.ModuloConfig).order_by(models.ModuloConfig.ordine).all()
+
+
+@router.put("/moduli/{codice}", response_model=schemas.ModuloConfigResponse)
+def update_modulo(
+    codice: str,
+    data: schemas.ModuloConfigUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.Utente = Depends(require_roles("admin")),
+):
+    obj = db.query(models.ModuloConfig).filter(models.ModuloConfig.codice == codice).first()
+    if not obj:
+        raise HTTPException(404, "Modulo non trovato")
+    obj.attivo = data.attivo
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+# ─── Info sistema ─────────────────────────────────────────────────────────────
+
+@router.get("/sistema/", response_model=schemas.SistemaStats)
+def sistema_stats(
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(require_roles("admin")),
+):
+    backend_dir = Path(__file__).resolve().parent.parent.parent
+    db_path = backend_dir / "rechurch.db"
+    db_size_mb = round(db_path.stat().st_size / 1024 / 1024, 2) if db_path.exists() else 0.0
+
+    backup_dir = backend_dir / "backups"
+    ultimo_backup = None
+    if backup_dir.exists():
+        backups = sorted(backup_dir.glob("rechurch_*.db"), reverse=True)
+        if backups:
+            from datetime import datetime
+            mtime = backups[0].stat().st_mtime
+            ultimo_backup = datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M")
+
+    return schemas.SistemaStats(
+        versione="2.0.0",
+        db_size_mb=db_size_mb,
+        totale_utenti=db.query(models.Utente).filter(models.Utente.attivo == True).count(),
+        totale_battesimi=db.query(models.Battesimo).count(),
+        totale_cresime=db.query(models.Cresima).count(),
+        totale_matrimoni=db.query(models.Matrimonio).count(),
+        totale_persone=db.query(models.Persona).count(),
+        totale_movimenti=db.query(models.MovimentoContabile).count(),
+        ultimo_backup=ultimo_backup,
+    )
