@@ -70,8 +70,8 @@ export default function Layout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-indigo-700 text-white'
-                    : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
+                    ? 'bg-indigo-700 text-white border-l-2 border-indigo-300 pl-3.5'
+                    : 'text-indigo-200 hover:bg-indigo-800 hover:text-white border-l-2 border-transparent pl-3.5'
                 }`
               }
             >

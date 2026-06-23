@@ -107,6 +107,11 @@ export interface Stats {
 export const battesimiApi = {
   list: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
     api.get<Battesimo[]>('/battesimi/', { params }).then(r => r.data),
+  listWithTotal: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+    api.get<Battesimo[]>('/battesimi/', { params }).then(r => ({
+      data: r.data,
+      total: parseInt(r.headers['x-total-count'] ?? '0', 10),
+    })),
   get: (id: number) => api.get<Battesimo>(`/battesimi/${id}`).then(r => r.data),
   create: (data: Omit<Battesimo, 'id' | 'created_at' | 'updated_at'>) =>
     api.post<Battesimo>('/battesimi/', data).then(r => r.data),
@@ -118,6 +123,11 @@ export const battesimiApi = {
 export const cresimeApi = {
   list: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
     api.get<Cresima[]>('/cresime/', { params }).then(r => r.data),
+  listWithTotal: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+    api.get<Cresima[]>('/cresime/', { params }).then(r => ({
+      data: r.data,
+      total: parseInt(r.headers['x-total-count'] ?? '0', 10),
+    })),
   get: (id: number) => api.get<Cresima>(`/cresime/${id}`).then(r => r.data),
   create: (data: Omit<Cresima, 'id' | 'created_at' | 'updated_at'>) =>
     api.post<Cresima>('/cresime/', data).then(r => r.data),
@@ -129,6 +139,11 @@ export const cresimeApi = {
 export const matrimoniApi = {
   list: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
     api.get<Matrimonio[]>('/matrimoni/', { params }).then(r => r.data),
+  listWithTotal: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+    api.get<Matrimonio[]>('/matrimoni/', { params }).then(r => ({
+      data: r.data,
+      total: parseInt(r.headers['x-total-count'] ?? '0', 10),
+    })),
   get: (id: number) => api.get<Matrimonio>(`/matrimoni/${id}`).then(r => r.data),
   create: (data: Omit<Matrimonio, 'id' | 'created_at' | 'updated_at'>) =>
     api.post<Matrimonio>('/matrimoni/', data).then(r => r.data),

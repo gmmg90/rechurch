@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Pencil, Trash2, Eye, Users, BookOpen } from 'lucide-react'
@@ -77,6 +77,10 @@ export default function RubricaList() {
 
   const isLoading = tab === 'persone' ? loadingPersone : loadingFamiglie
 
+  useEffect(() => { document.title = 'Rubrica — ReChurch' }, [])
+
+  const hasSearch = !!debouncedSearch
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -149,127 +153,149 @@ export default function RubricaList() {
         {isLoading ? (
           <div className="p-8 text-center text-gray-400">Caricamento...</div>
         ) : tab === 'persone' ? (
-          persone.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Nessuna persona trovata</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b border-gray-100">
-                    <th className="px-4 py-3 font-medium">Nome</th>
-                    <th className="px-4 py-3 font-medium">Cognome</th>
-                    <th className="px-4 py-3 font-medium">Famiglia</th>
-                    <th className="px-4 py-3 font-medium">Città</th>
-                    <th className="px-4 py-3 font-medium">Telefono</th>
-                    <th className="px-4 py-3 font-medium w-32"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {persone.map(p => (
-                    <tr
-                      key={p.id}
-                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/rubrica/persone/${p.id}`)}
-                    >
-                      <td className="px-4 py-3 font-medium text-gray-800">{p.nome}</td>
-                      <td className="px-4 py-3 text-gray-700">{p.cognome}</td>
-                      <td className="px-4 py-3 text-gray-600">{p.famiglia_cognome ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-600">{p.citta ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-600">{p.telefono ?? '—'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
-                          <button
-                            onClick={() => navigate(`/rubrica/persone/${p.id}`)}
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                            title="Scheda"
-                          >
-                            <Eye size={15} />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/rubrica/persone/${p.id}/modifica`)}
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                            title="Modifica"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeletePersona(p)}
-                            className={`p-1.5 rounded transition-colors ${
-                              deleteConfirm === p.id
-                                ? 'text-white bg-red-600 hover:bg-red-700'
-                                : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                            }`}
-                            title={deleteConfirm === p.id ? 'Conferma eliminazione' : 'Elimina'}
-                          >
-                            <Trash2 size={15} />
-                          </button>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="px-4 py-3 font-medium">Nome</th>
+                  <th className="px-4 py-3 font-medium">Cognome</th>
+                  <th className="px-4 py-3 font-medium">Famiglia</th>
+                  <th className="px-4 py-3 font-medium">Città</th>
+                  <th className="px-4 py-3 font-medium">Telefono</th>
+                  <th className="px-4 py-3 font-medium w-32"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {persone.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-16">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                          <Users size={20} className="text-gray-400" />
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
+                        <p className="text-gray-500 font-medium">Nessun risultato</p>
+                        {hasSearch
+                          ? <p className="text-gray-400 text-sm">Prova a modificare i filtri di ricerca</p>
+                          : <button onClick={() => navigate('/rubrica/persone/nuova')} className="text-indigo-600 text-sm hover:underline">Aggiungi la prima persona</button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                ) : persone.map(p => (
+                  <tr
+                    key={p.id}
+                    className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/rubrica/persone/${p.id}`)}
+                  >
+                    <td className="px-4 py-3 font-medium text-gray-800">{p.nome}</td>
+                    <td className="px-4 py-3 text-gray-700">{p.cognome}</td>
+                    <td className="px-4 py-3 text-gray-600">{p.famiglia_cognome ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{p.citta ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{p.telefono ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => navigate(`/rubrica/persone/${p.id}`)}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                          title="Scheda"
+                        >
+                          <Eye size={15} />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/rubrica/persone/${p.id}/modifica`)}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                          title="Modifica"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePersona(p)}
+                          className={`p-1.5 rounded transition-colors ${
+                            deleteConfirm === p.id
+                              ? 'text-white bg-red-600 hover:bg-red-700'
+                              : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                          }`}
+                          title={deleteConfirm === p.id ? 'Conferma eliminazione' : 'Elimina'}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          famiglie.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Nessuna famiglia trovata</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b border-gray-100">
-                    <th className="px-4 py-3 font-medium">Cognome</th>
-                    <th className="px-4 py-3 font-medium">Città</th>
-                    <th className="px-4 py-3 font-medium">N° Membri</th>
-                    <th className="px-4 py-3 font-medium">Telefono</th>
-                    <th className="px-4 py-3 font-medium w-32"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {famiglie.map(f => (
-                    <tr
-                      key={f.id}
-                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/rubrica/famiglie/${f.id}`)}
-                    >
-                      <td className="px-4 py-3 font-medium text-gray-800">Fam. {f.cognome}</td>
-                      <td className="px-4 py-3 text-gray-600">{f.citta ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-600">
-                        <span className="inline-flex items-center gap-1">
-                          <Users size={13} className="text-gray-400" />
-                          {f.num_persone ?? 0}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{f.telefono ?? '—'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
-                          <button
-                            onClick={() => navigate(`/rubrica/famiglie/${f.id}`)}
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                            title="Scheda"
-                          >
-                            <Eye size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteFamiglia(f)}
-                            className={`p-1.5 rounded transition-colors ${
-                              deleteConfirm === f.id
-                                ? 'text-white bg-red-600 hover:bg-red-700'
-                                : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                            }`}
-                            title={deleteConfirm === f.id ? 'Conferma eliminazione' : 'Elimina'}
-                          >
-                            <Trash2 size={15} />
-                          </button>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="px-4 py-3 font-medium">Cognome</th>
+                  <th className="px-4 py-3 font-medium">Città</th>
+                  <th className="px-4 py-3 font-medium">N° Membri</th>
+                  <th className="px-4 py-3 font-medium">Telefono</th>
+                  <th className="px-4 py-3 font-medium w-32"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {famiglie.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-16">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                          <Users size={20} className="text-gray-400" />
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
+                        <p className="text-gray-500 font-medium">Nessun risultato</p>
+                        {hasSearch
+                          ? <p className="text-gray-400 text-sm">Prova a modificare i filtri di ricerca</p>
+                          : <button onClick={() => navigate('/rubrica/famiglie/nuova')} className="text-indigo-600 text-sm hover:underline">Aggiungi la prima famiglia</button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                ) : famiglie.map(f => (
+                  <tr
+                    key={f.id}
+                    className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/rubrica/famiglie/${f.id}`)}
+                  >
+                    <td className="px-4 py-3 font-medium text-gray-800">Fam. {f.cognome}</td>
+                    <td className="px-4 py-3 text-gray-600">{f.citta ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      <span className="inline-flex items-center gap-1">
+                        <Users size={13} className="text-gray-400" />
+                        {f.num_persone ?? 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{f.telefono ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => navigate(`/rubrica/famiglie/${f.id}`)}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                          title="Scheda"
+                        >
+                          <Eye size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFamiglia(f)}
+                          className={`p-1.5 rounded transition-colors ${
+                            deleteConfirm === f.id
+                              ? 'text-white bg-red-600 hover:bg-red-700'
+                              : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                          }`}
+                          title={deleteConfirm === f.id ? 'Conferma eliminazione' : 'Elimina'}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

@@ -20,6 +20,7 @@ import FamigliaDetail from './pages/rubrica/FamigliaDetail'
 import ContabilitaList from './pages/contabilita/ContabilitaList'
 import MovimentoForm from './pages/contabilita/MovimentoForm'
 import ScadenziarioPage from './pages/scadenziario/ScadenziarioPage'
+import NotFound from './pages/NotFound'
 
 export default function App() {
   return (
@@ -65,6 +66,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </AuthProvider>

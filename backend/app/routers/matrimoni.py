@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, extract
 
@@ -16,6 +16,7 @@ def list_matrimoni(
     anno: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    response: Response = None,
     db: Session = Depends(get_db),
     _: models.Utente = Depends(get_current_user),
 ):
@@ -34,6 +35,11 @@ def list_matrimoni(
         )
     if anno:
         q = q.filter(extract("year", models.Matrimonio.data_matrimonio) == anno)
+
+    total = q.count()
+    if response is not None:
+        response.headers["X-Total-Count"] = str(total)
+
     return q.order_by(models.Matrimonio.data_matrimonio.desc()).offset(skip).limit(limit).all()
 
 
