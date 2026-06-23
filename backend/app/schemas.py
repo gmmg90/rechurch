@@ -376,6 +376,8 @@ class MovimentoContabileResponse(MovimentoContabileBase):
     id: int
     categoria_nome: Optional[str] = None
     fornitore_nome: Optional[str] = None
+    allegato_path: Optional[str] = None
+    allegato_nome: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     model_config = {"from_attributes": True}

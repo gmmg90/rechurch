@@ -1,12 +1,27 @@
+import os
+import shutil
 from decimal import Decimal
 from typing import List, Optional
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 import io
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "contabilita")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+ALLOWED_MIME = {
+    "image/jpeg", "image/png", "image/gif", "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+MAX_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 from app.database import get_db
 from app import models, schemas
@@ -240,7 +255,79 @@ def delete_movimento(
     obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
     if not obj:
         raise HTTPException(404, "Movimento non trovato")
+    if obj.allegato_path and os.path.exists(obj.allegato_path):
+        os.remove(obj.allegato_path)
     db.delete(obj)
+    db.commit()
+
+
+# ─── Allegati ─────────────────────────────────────────────────────────────────
+
+@router.post("/movimenti/{id}/allegato", response_model=schemas.MovimentoContabileResponse)
+async def upload_allegato(
+    id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
+    obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
+    if not obj:
+        raise HTTPException(404, "Movimento non trovato")
+
+    if file.content_type not in ALLOWED_MIME:
+        raise HTTPException(400, f"Tipo file non supportato: {file.content_type}")
+
+    content = await file.read()
+    if len(content) > MAX_SIZE_BYTES:
+        raise HTTPException(400, "File troppo grande (max 10 MB)")
+
+    # Remove old attachment if present
+    if obj.allegato_path and os.path.exists(obj.allegato_path):
+        os.remove(obj.allegato_path)
+
+    # Sanitise filename and save
+    safe_name = os.path.basename(file.filename or "allegato")
+    dest = os.path.join(UPLOAD_DIR, f"{id}_{safe_name}")
+    with open(dest, "wb") as f:
+        f.write(content)
+
+    obj.allegato_path = dest
+    obj.allegato_nome = file.filename
+    db.commit()
+    db.refresh(obj)
+    return schemas.MovimentoContabileResponse.model_validate(obj)
+
+
+@router.get("/movimenti/{id}/allegato")
+def download_allegato(
+    id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
+    obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
+    if not obj or not obj.allegato_path:
+        raise HTTPException(404, "Allegato non trovato")
+    if not os.path.exists(obj.allegato_path):
+        raise HTTPException(404, "File non trovato sul disco")
+    return FileResponse(
+        obj.allegato_path,
+        filename=obj.allegato_nome or os.path.basename(obj.allegato_path),
+    )
+
+
+@router.delete("/movimenti/{id}/allegato", status_code=204)
+def delete_allegato(
+    id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
+    obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
+    if not obj:
+        raise HTTPException(404, "Movimento non trovato")
+    if obj.allegato_path and os.path.exists(obj.allegato_path):
+        os.remove(obj.allegato_path)
+    obj.allegato_path = None
+    obj.allegato_nome = None
     db.commit()
 
 

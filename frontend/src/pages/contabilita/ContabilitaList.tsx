@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Pencil, Trash2, Download, Wallet, TrendingUp, TrendingDown, Scale } from 'lucide-react'
+import { Search, Plus, Pencil, Trash2, Download, Wallet, TrendingUp, TrendingDown, Scale, Paperclip } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { contabilitaApi, type CategoriaContabile, type Fornitore } from '../../api/client'
 
@@ -352,6 +352,17 @@ export default function ContabilitaList() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
+                          {m.allegato_nome && (
+                            <a
+                              href={contabilitaApi.getAllegatoUrl(m.id)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                              title={`Allegato: ${m.allegato_nome}`}
+                            >
+                              <Paperclip size={15} />
+                            </a>
+                          )}
                           <button
                             onClick={() => navigate(`/contabilita/${m.id}/modifica`)}
                             className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"

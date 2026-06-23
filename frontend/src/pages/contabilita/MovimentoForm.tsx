@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Wallet } from 'lucide-react'
+import { ArrowLeft, Wallet, Paperclip, X, Download, FileText, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { contabilitaApi } from '../../api/client'
 
@@ -31,6 +31,12 @@ const emptyForm = (): FormState => ({
   note: '',
 })
 
+function fileIcon(nome: string) {
+  const ext = nome.split('.').pop()?.toLowerCase()
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext ?? '')) return <Image size={16} />
+  return <FileText size={16} />
+}
+
 export default function MovimentoForm() {
   const { id } = useParams<{ id?: string }>()
   const isEdit = Boolean(id)
@@ -38,15 +44,16 @@ export default function MovimentoForm() {
   const qc = useQueryClient()
 
   const [form, setForm] = useState<FormState>(emptyForm())
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  // Load existing movimento for edit
   const { data: existing, isLoading: loadingExisting } = useQuery({
     queryKey: ['movimento', id],
     queryFn: () => contabilitaApi.getMovimento(Number(id)),
     enabled: isEdit,
   })
 
-  // Load all categories (unfiltered — we filter client-side by tipo)
   const { data: allCategorie = [] } = useQuery({
     queryKey: ['categorie'],
     queryFn: () => contabilitaApi.listCategorie(),
@@ -57,7 +64,6 @@ export default function MovimentoForm() {
     queryFn: () => contabilitaApi.listFornitori(),
   })
 
-  // Populate form when editing
   useEffect(() => {
     if (existing) {
       setForm({
@@ -76,8 +82,17 @@ export default function MovimentoForm() {
 
   const categorieFiltered = allCategorie.filter(c => c.tipo === form.tipo)
 
+  const delAllegato = useMutation({
+    mutationFn: () => contabilitaApi.deleteAllegato(Number(id)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['movimento', id] })
+      toast.success('Allegato rimosso')
+    },
+    onError: () => toast.error('Errore nella rimozione'),
+  })
+
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const payload = {
         data: form.data,
         tipo: form.tipo,
@@ -89,10 +104,16 @@ export default function MovimentoForm() {
         metodo_pagamento: form.metodo_pagamento || undefined,
         note: form.note || undefined,
       }
+      let saved
       if (isEdit) {
-        return contabilitaApi.updateMovimento(Number(id), payload)
+        saved = await contabilitaApi.updateMovimento(Number(id), payload)
+      } else {
+        saved = await contabilitaApi.createMovimento(payload)
       }
-      return contabilitaApi.createMovimento(payload)
+      if (pendingFile) {
+        await contabilitaApi.uploadAllegato(saved.id, pendingFile)
+      }
+      return saved
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['movimenti'] })
@@ -110,7 +131,21 @@ export default function MovimentoForm() {
     setForm(f => ({ ...f, tipo: t, categoria_id: '' }))
   }
 
+  const handleFileSelect = (file: File) => {
+    const MAX = 10 * 1024 * 1024
+    if (file.size > MAX) { toast.error('File troppo grande (max 10 MB)'); return }
+    setPendingFile(file)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFileSelect(file)
+  }
+
   const isValid = form.data && form.importo && parseFloat(form.importo) > 0 && form.descrizione.trim()
+  const hasExistingAllegato = isEdit && existing?.allegato_nome
 
   if (isEdit && loadingExisting) {
     return <div className="p-8 text-gray-400">Caricamento...</div>
@@ -273,6 +308,83 @@ export default function MovimentoForm() {
             value={form.note}
             onChange={set('note')}
           />
+        </div>
+
+        {/* ── Allegato ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Allegato</label>
+
+          {/* Allegato esistente (solo in modifica) */}
+          {hasExistingAllegato && !pendingFile && (
+            <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg mb-3">
+              <span className="text-indigo-500">{fileIcon(existing.allegato_nome!)}</span>
+              <span className="text-sm text-indigo-800 flex-1 truncate">{existing.allegato_nome}</span>
+              <a
+                href={contabilitaApi.getAllegatoUrl(Number(id))}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
+                title="Scarica"
+              >
+                <Download size={15} />
+              </a>
+              <button
+                type="button"
+                onClick={() => delAllegato.mutate()}
+                disabled={delAllegato.isPending}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                title="Rimuovi"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
+
+          {/* File selezionato (in attesa di upload) */}
+          {pendingFile && (
+            <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-3">
+              <span className="text-amber-500">{fileIcon(pendingFile.name)}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-amber-800 truncate">{pendingFile.name}</p>
+                <p className="text-xs text-amber-500">{(pendingFile.size / 1024).toFixed(0)} KB — verrà caricato al salvataggio</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingFile(null)}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          )}
+
+          {/* Drop zone */}
+          {!pendingFile && (
+            <div
+              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileRef.current?.click()}
+              className={`flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                dragOver
+                  ? 'border-indigo-400 bg-indigo-50'
+                  : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+              }`}
+            >
+              <Paperclip size={20} className="text-gray-400" />
+              <p className="text-sm text-gray-500">
+                {hasExistingAllegato ? 'Trascina un file per sostituire l\'allegato' : 'Trascina un file o clicca per allegarlo'}
+              </p>
+              <p className="text-xs text-gray-400">PDF, immagini, Word, Excel — max 10 MB</p>
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f) }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Actions */}

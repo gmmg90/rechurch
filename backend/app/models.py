@@ -178,6 +178,8 @@ class MovimentoContabile(Base):
     numero_documento = Column(String(50), nullable=True)
     metodo_pagamento = Column(String(50), nullable=True)  # contanti | bonifico | carta | assegno
     note = Column(Text, nullable=True)
+    allegato_path = Column(String(500), nullable=True)
+    allegato_nome = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

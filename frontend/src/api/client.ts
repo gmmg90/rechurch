@@ -356,6 +356,8 @@ export interface MovimentoContabile {
   numero_documento?: string
   metodo_pagamento?: string
   note?: string
+  allegato_path?: string
+  allegato_nome?: string
   created_at?: string
   updated_at?: string
 }
@@ -395,6 +397,16 @@ export const contabilitaApi = {
   updateMovimento: (id: number, data: Partial<MovimentoContabile>) =>
     api.put<MovimentoContabile>(`/contabilita/movimenti/${id}`, data).then(r => r.data),
   deleteMovimento: (id: number) => api.delete(`/contabilita/movimenti/${id}`),
+
+  uploadAllegato: (id: number, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post<MovimentoContabile>(`/contabilita/movimenti/${id}/allegato`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data)
+  },
+  getAllegatoUrl: (id: number) => `${api.defaults.baseURL}/contabilita/movimenti/${id}/allegato`,
+  deleteAllegato: (id: number) => api.delete(`/contabilita/movimenti/${id}/allegato`),
 
   riepilogo: (params?: { dal?: string; al?: string }) =>
     api.get<RiepilogoContabile>('/contabilita/riepilogo/', { params }).then(r => r.data),
