@@ -12,6 +12,7 @@ import {
   BookOpen,
   Wallet,
   CalendarDays,
+  ScanLine,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -30,6 +31,7 @@ const baseNavItems = [
   { to: '/importa', label: 'Importa Dati', icon: Upload },
   { to: '/rubrica', label: 'Rubrica', icon: BookOpen },
   { to: '/contabilita', label: 'Contabilità', icon: Wallet },
+  { to: '/scanner', label: 'Scanner Docs', icon: ScanLine },
   { to: '/scadenziario', label: 'Scadenziario', icon: CalendarDays },
   { to: '/impostazioni', label: 'Impostazioni', icon: Settings },
 ]
