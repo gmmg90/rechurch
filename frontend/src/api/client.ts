@@ -392,4 +392,50 @@ export const contabilitaApi = {
   },
 }
 
+export interface CategoriaEvento {
+  id: number
+  nome: string
+  colore: string
+}
+
+export interface Evento {
+  id: number
+  titolo: string
+  descrizione?: string
+  data_inizio: string  // ISO datetime
+  data_fine?: string
+  tutto_il_giorno: boolean
+  luogo?: string
+  categoria_id?: number
+  categoria_nome?: string
+  categoria_colore?: string
+  ricorrenza?: string
+  ricorrenza_fine?: string
+  occurrence_start?: string
+  occurrence_end?: string
+  note?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export const scadenziarioApi = {
+  listCategorie: () => api.get<CategoriaEvento[]>('/scadenziario/categorie/').then(r => r.data),
+  createCategoria: (data: Omit<CategoriaEvento, 'id'>) =>
+    api.post<CategoriaEvento>('/scadenziario/categorie/', data).then(r => r.data),
+  updateCategoria: (id: number, data: Partial<CategoriaEvento>) =>
+    api.put<CategoriaEvento>(`/scadenziario/categorie/${id}`, data).then(r => r.data),
+  deleteCategoria: (id: number) => api.delete(`/scadenziario/categorie/${id}`),
+
+  listEventi: (params?: { dal?: string; al?: string; categoria_id?: number }) =>
+    api.get<Evento[]>('/scadenziario/eventi/', { params }).then(r => r.data),
+  getEvento: (id: number) => api.get<Evento>(`/scadenziario/eventi/${id}`).then(r => r.data),
+  createEvento: (data: Omit<Evento, 'id' | 'created_at' | 'updated_at' | 'categoria_nome' | 'categoria_colore' | 'occurrence_start' | 'occurrence_end'>) =>
+    api.post<Evento>('/scadenziario/eventi/', data).then(r => r.data),
+  updateEvento: (id: number, data: Partial<Evento>) =>
+    api.put<Evento>(`/scadenziario/eventi/${id}`, data).then(r => r.data),
+  deleteEvento: (id: number) => api.delete(`/scadenziario/eventi/${id}`),
+  prossimiEventi: (giorni?: number) =>
+    api.get<Evento[]>('/scadenziario/prossimi/', { params: giorni ? { giorni } : {} }).then(r => r.data),
+}
+
 export default api

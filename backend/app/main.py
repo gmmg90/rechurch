@@ -15,6 +15,7 @@ from app.routers import auth as auth_router
 from app.routers import backup as backup_router
 from app.routers import rubrica as rubrica_router
 from app.routers import contabilita as contabilita_router
+from app.routers import scadenziario as scadenziario_router
 
 app = FastAPI(
     title="ReChurch API",
@@ -46,6 +47,7 @@ app.include_router(config_router.router)
 app.include_router(pdf_router.router)
 app.include_router(rubrica_router.router)
 app.include_router(contabilita_router.router)
+app.include_router(scadenziario_router.router)
 
 # ── Static files ──────────────────────────────────────────────────────────────
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")

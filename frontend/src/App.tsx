@@ -19,6 +19,7 @@ import PersonaDetail from './pages/rubrica/PersonaDetail'
 import FamigliaDetail from './pages/rubrica/FamigliaDetail'
 import ContabilitaList from './pages/contabilita/ContabilitaList'
 import MovimentoForm from './pages/contabilita/MovimentoForm'
+import ScadenziarioPage from './pages/scadenziario/ScadenziarioPage'
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="contabilita" element={<ContabilitaList />} />
           <Route path="contabilita/nuovo" element={<MovimentoForm />} />
           <Route path="contabilita/:id/modifica" element={<MovimentoForm />} />
+          <Route path="scadenziario" element={<ScadenziarioPage />} />
           <Route path="impostazioni" element={<Impostazioni />} />
           <Route
             path="utenti"

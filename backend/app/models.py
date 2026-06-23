@@ -180,3 +180,29 @@ class MovimentoContabile(Base):
     note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class CategoriaEvento(Base):
+    __tablename__ = "categorie_eventi"
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False)
+    colore = Column(String(7), nullable=False, default="#6366f1")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Evento(Base):
+    __tablename__ = "eventi"
+    id = Column(Integer, primary_key=True, index=True)
+    titolo = Column(String(200), nullable=False)
+    descrizione = Column(Text, nullable=True)
+    data_inizio = Column(DateTime(timezone=True), nullable=False)
+    data_fine = Column(DateTime(timezone=True), nullable=True)
+    tutto_il_giorno = Column(Boolean, default=False, nullable=False)
+    luogo = Column(String(300), nullable=True)
+    categoria_id = Column(Integer, ForeignKey("categorie_eventi.id"), nullable=True)
+    ricorrenza = Column(String(20), nullable=True)  # None | 'giornaliera' | 'settimanale' | 'mensile' | 'annuale'
+    ricorrenza_fine = Column(Date, nullable=True)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
