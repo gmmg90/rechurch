@@ -295,3 +295,94 @@ class PersonaDetail(PersonaResponse):
     cresima: Optional["CresimaResponse"] = None
     matrimonio: Optional["MatrimonioResponse"] = None
     ruolo_matrimonio: Optional[str] = None
+
+
+# ─── Contabilità ──────────────────────────────────────────────────────────────
+
+from decimal import Decimal
+
+class CategoriaContabileBase(BaseModel):
+    nome: str
+    tipo: str  # 'entrata' | 'uscita'
+    colore: Optional[str] = None
+    note: Optional[str] = None
+
+class CategoriaContabileCreate(CategoriaContabileBase):
+    pass
+
+class CategoriaContabileUpdate(BaseModel):
+    nome: Optional[str] = None
+    tipo: Optional[str] = None
+    colore: Optional[str] = None
+    note: Optional[str] = None
+
+class CategoriaContabileResponse(CategoriaContabileBase):
+    id: int
+    created_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+
+class FornitoreBase(BaseModel):
+    nome: str
+    partita_iva: Optional[str] = None
+    indirizzo: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    note: Optional[str] = None
+
+class FornitoreCreate(FornitoreBase):
+    pass
+
+class FornitoreUpdate(BaseModel):
+    nome: Optional[str] = None
+    partita_iva: Optional[str] = None
+    indirizzo: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    note: Optional[str] = None
+
+class FornitoreResponse(FornitoreBase):
+    id: int
+    created_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+
+class MovimentoContabileBase(BaseModel):
+    data: date
+    tipo: str  # 'entrata' | 'uscita'
+    importo: Decimal
+    descrizione: str
+    categoria_id: Optional[int] = None
+    fornitore_id: Optional[int] = None
+    numero_documento: Optional[str] = None
+    metodo_pagamento: Optional[str] = None
+    note: Optional[str] = None
+
+class MovimentoContabileCreate(MovimentoContabileBase):
+    pass
+
+class MovimentoContabileUpdate(BaseModel):
+    data: Optional[date] = None
+    tipo: Optional[str] = None
+    importo: Optional[Decimal] = None
+    descrizione: Optional[str] = None
+    categoria_id: Optional[int] = None
+    fornitore_id: Optional[int] = None
+    numero_documento: Optional[str] = None
+    metodo_pagamento: Optional[str] = None
+    note: Optional[str] = None
+
+class MovimentoContabileResponse(MovimentoContabileBase):
+    id: int
+    categoria_nome: Optional[str] = None
+    fornitore_nome: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+
+class RiepilogoContabile(BaseModel):
+    totale_entrate: Decimal
+    totale_uscite: Decimal
+    saldo: Decimal
+    per_categoria: list[dict]  # [{categoria, tipo, totale}]

@@ -17,6 +17,8 @@ import RubricaList from './pages/rubrica/RubricaList'
 import PersonaForm from './pages/rubrica/PersonaForm'
 import PersonaDetail from './pages/rubrica/PersonaDetail'
 import FamigliaDetail from './pages/rubrica/FamigliaDetail'
+import ContabilitaList from './pages/contabilita/ContabilitaList'
+import MovimentoForm from './pages/contabilita/MovimentoForm'
 
 export default function App() {
   return (
@@ -49,6 +51,9 @@ export default function App() {
           <Route path="rubrica/persone/:id" element={<PersonaDetail />} />
           <Route path="rubrica/persone/:id/modifica" element={<PersonaForm />} />
           <Route path="rubrica/famiglie/:id" element={<FamigliaDetail />} />
+          <Route path="contabilita" element={<ContabilitaList />} />
+          <Route path="contabilita/nuovo" element={<MovimentoForm />} />
+          <Route path="contabilita/:id/modifica" element={<MovimentoForm />} />
           <Route path="impostazioni" element={<Impostazioni />} />
           <Route
             path="utenti"

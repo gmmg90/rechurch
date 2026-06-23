@@ -308,4 +308,88 @@ export const rubricaApi = {
   deleteFamiglia: (id: number) => api.delete(`/rubrica/famiglie/${id}`),
 }
 
+export interface CategoriaContabile {
+  id: number
+  nome: string
+  tipo: 'entrata' | 'uscita'
+  colore?: string
+  note?: string
+  created_at?: string
+}
+
+export interface Fornitore {
+  id: number
+  nome: string
+  partita_iva?: string
+  indirizzo?: string
+  telefono?: string
+  email?: string
+  note?: string
+  created_at?: string
+}
+
+export interface MovimentoContabile {
+  id: number
+  data: string
+  tipo: 'entrata' | 'uscita'
+  importo: number
+  descrizione: string
+  categoria_id?: number
+  categoria_nome?: string
+  fornitore_id?: number
+  fornitore_nome?: string
+  numero_documento?: string
+  metodo_pagamento?: string
+  note?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface RiepilogoContabile {
+  totale_entrate: number
+  totale_uscite: number
+  saldo: number
+  per_categoria: { categoria_id: number | null; categoria: string; tipo: string; colore: string; totale: number }[]
+}
+
+export const contabilitaApi = {
+  listCategorie: (tipo?: string) =>
+    api.get<CategoriaContabile[]>('/contabilita/categorie/', { params: tipo ? { tipo } : {} }).then(r => r.data),
+  createCategoria: (data: Omit<CategoriaContabile, 'id' | 'created_at'>) =>
+    api.post<CategoriaContabile>('/contabilita/categorie/', data).then(r => r.data),
+  updateCategoria: (id: number, data: Partial<CategoriaContabile>) =>
+    api.put<CategoriaContabile>(`/contabilita/categorie/${id}`, data).then(r => r.data),
+  deleteCategoria: (id: number) => api.delete(`/contabilita/categorie/${id}`),
+
+  listFornitori: (search?: string) =>
+    api.get<Fornitore[]>('/contabilita/fornitori/', { params: search ? { search } : {} }).then(r => r.data),
+  createFornitore: (data: Omit<Fornitore, 'id' | 'created_at'>) =>
+    api.post<Fornitore>('/contabilita/fornitori/', data).then(r => r.data),
+  updateFornitore: (id: number, data: Partial<Fornitore>) =>
+    api.put<Fornitore>(`/contabilita/fornitori/${id}`, data).then(r => r.data),
+  deleteFornitore: (id: number) => api.delete(`/contabilita/fornitori/${id}`),
+
+  listMovimenti: (params?: {
+    search?: string; tipo?: string; categoria_id?: number; fornitore_id?: number;
+    dal?: string; al?: string; skip?: number; limit?: number
+  }) =>
+    api.get<MovimentoContabile[]>('/contabilita/movimenti/', { params }).then(r => r.data),
+  getMovimento: (id: number) => api.get<MovimentoContabile>(`/contabilita/movimenti/${id}`).then(r => r.data),
+  createMovimento: (data: Omit<MovimentoContabile, 'id' | 'created_at' | 'updated_at' | 'categoria_nome' | 'fornitore_nome'>) =>
+    api.post<MovimentoContabile>('/contabilita/movimenti/', data).then(r => r.data),
+  updateMovimento: (id: number, data: Partial<MovimentoContabile>) =>
+    api.put<MovimentoContabile>(`/contabilita/movimenti/${id}`, data).then(r => r.data),
+  deleteMovimento: (id: number) => api.delete(`/contabilita/movimenti/${id}`),
+
+  riepilogo: (params?: { dal?: string; al?: string }) =>
+    api.get<RiepilogoContabile>('/contabilita/riepilogo/', { params }).then(r => r.data),
+
+  exportExcelUrl: (dal?: string, al?: string) => {
+    const p = new URLSearchParams()
+    if (dal) p.set('dal', dal)
+    if (al) p.set('al', al)
+    return `/api/contabilita/export/excel${p.toString() ? '?' + p.toString() : ''}`
+  },
+}
+
 export default api

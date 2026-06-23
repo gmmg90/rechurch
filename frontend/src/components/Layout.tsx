@@ -10,6 +10,7 @@ import {
   Users,
   LogOut,
   BookOpen,
+  Wallet,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -27,6 +28,7 @@ const baseNavItems = [
   { to: '/matrimoni', label: 'Matrimoni', icon: Heart },
   { to: '/importa', label: 'Importa Dati', icon: Upload },
   { to: '/rubrica', label: 'Rubrica', icon: BookOpen },
+  { to: '/contabilita', label: 'Contabilità', icon: Wallet },
   { to: '/impostazioni', label: 'Impostazioni', icon: Settings },
 ]
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, Integer, String, Date, DateTime, Text, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, Date, DateTime, Text, ForeignKey, Numeric
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -140,3 +140,43 @@ class PersonaSacramento(Base):
     sacramento_id = Column(Integer, nullable=False)
     ruolo = Column(String(20), nullable=True)  # sposo | sposa (only for matrimonio)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class CategoriaContabile(Base):
+    __tablename__ = "categorie_contabili"
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False)
+    tipo = Column(String(10), nullable=False)  # 'entrata' | 'uscita'
+    colore = Column(String(7), nullable=True)  # hex color e.g. '#3b82f6'
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Fornitore(Base):
+    __tablename__ = "fornitori"
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(200), nullable=False)
+    partita_iva = Column(String(20), nullable=True)
+    indirizzo = Column(String(300), nullable=True)
+    telefono = Column(String(50), nullable=True)
+    email = Column(String(200), nullable=True)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class MovimentoContabile(Base):
+    __tablename__ = "movimenti_contabili"
+    id = Column(Integer, primary_key=True, index=True)
+    data = Column(Date, nullable=False)
+    tipo = Column(String(10), nullable=False)  # 'entrata' | 'uscita'
+    importo = Column(Numeric(12, 2), nullable=False)
+    descrizione = Column(String(500), nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorie_contabili.id"), nullable=True)
+    fornitore_id = Column(Integer, ForeignKey("fornitori.id"), nullable=True)
+    numero_documento = Column(String(50), nullable=True)
+    metodo_pagamento = Column(String(50), nullable=True)  # contanti | bonifico | carta | assegno
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
