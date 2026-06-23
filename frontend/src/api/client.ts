@@ -5,6 +5,30 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Request interceptor: attach JWT token if present
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('rechurch_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Response interceptor: on 401 clear token and redirect to login
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes('/auth/login')
+    ) {
+      localStorage.removeItem('rechurch_token')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 export interface Battesimo {
   id: number
   nome: string
@@ -185,6 +209,42 @@ export const importApi = {
     mappings: { table: string; tipo: string; column_mapping: Record<string, string> }[]
   }) =>
     api.post<{ inserted: number; errors: string[] }>('/import/mdb/confirm', payload).then(r => r.data),
+}
+
+export interface AuthUser {
+  id: number
+  nome: string
+  cognome: string
+  email: string
+  ruolo: string
+  attivo: boolean
+  ultimo_accesso?: string
+  created_at?: string
+}
+
+export const authApi = {
+  login: (email: string, password: string) =>
+    api.post<{ access_token: string; token_type: string; user: AuthUser }>(
+      '/auth/login',
+      { email, password }
+    ).then(r => r.data),
+  me: () => api.get<AuthUser>('/auth/me').then(r => r.data),
+  cambiaPassword: (password_attuale: string, nuova_password: string) =>
+    api.put('/auth/cambia-password', { password_attuale, nuova_password }).then(r => r.data),
+  listUtenti: () => api.get<AuthUser[]>('/auth/utenti').then(r => r.data),
+  createUtente: (data: {
+    nome: string; cognome: string; email: string; ruolo: string; password: string
+  }) => api.post<AuthUser>('/auth/utenti', data).then(r => r.data),
+  updateUtente: (id: number, data: Partial<{
+    nome: string; cognome: string; email: string; ruolo: string; attivo: boolean
+  }>) => api.put<AuthUser>(`/auth/utenti/${id}`, data).then(r => r.data),
+  deleteUtente: (id: number) => api.delete(`/auth/utenti/${id}`).then(r => r.data),
+}
+
+export const backupApi = {
+  esegui: () => api.post<{ filename: string; size_kb: number }>('/backup/esegui').then(r => r.data),
+  lista: () => api.get<{ filename: string; size_kb: number; created_at: string }[]>('/backup/lista').then(r => r.data),
+  downloadUrl: (filename: string) => `/api/backup/${filename}`,
 }
 
 export default api

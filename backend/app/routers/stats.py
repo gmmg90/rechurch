@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.database import get_db
 from app import models
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -15,6 +16,7 @@ def get_stats(
     db: Session = Depends(get_db),
     dal: Optional[date] = Query(None),
     al: Optional[date] = Query(None),
+    _: models.Utente = Depends(get_current_user),
 ):
     def period_dict(date_col, fmt: str) -> dict[str, int]:
         q = db.query(func.strftime(fmt, date_col).label("p"), func.count().label("n"))

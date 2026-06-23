@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Upload, FileText, Database, CheckCircle, AlertCircle, ChevronRight } from 'lucide-react'
+import { FileText, Database, CheckCircle, AlertCircle, ChevronRight } from 'lucide-react'
 import { importApi } from '../api/client'
 
 type Tipo = 'battesimi' | 'cresime' | 'matrimoni'

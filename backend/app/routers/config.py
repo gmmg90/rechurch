@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models, schemas
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -24,12 +25,19 @@ def _get_or_create(db: Session) -> models.ParrocchiaConfig:
 
 
 @router.get("/", response_model=schemas.ParrocchiaConfigResponse)
-def get_config(db: Session = Depends(get_db)):
+def get_config(
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     return _get_or_create(db)
 
 
 @router.put("/", response_model=schemas.ParrocchiaConfigResponse)
-def update_config(data: schemas.ParrocchiaConfigUpdate, db: Session = Depends(get_db)):
+def update_config(
+    data: schemas.ParrocchiaConfigUpdate,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     config = _get_or_create(db)
     for key, value in data.model_dump(exclude_none=True).items():
         setattr(config, key, value)
@@ -39,7 +47,11 @@ def update_config(data: schemas.ParrocchiaConfigUpdate, db: Session = Depends(ge
 
 
 @router.post("/logo")
-async def upload_logo(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_logo(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in (".png", ".jpg", ".jpeg"):
         raise HTTPException(status_code=400, detail="Solo immagini PNG o JPG")
@@ -55,7 +67,10 @@ async def upload_logo(file: UploadFile = File(...), db: Session = Depends(get_db
 
 
 @router.delete("/logo")
-def delete_logo(db: Session = Depends(get_db)):
+def delete_logo(
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     config = _get_or_create(db)
     if config.logo_path and os.path.exists(config.logo_path):
         os.remove(config.logo_path)

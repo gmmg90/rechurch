@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Save, Upload, Trash2, Building2 } from 'lucide-react'
-import { configApi, type ParrocchiaConfig } from '../api/client'
+import { Save, Upload, Trash2, Building2, Database, Download } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { configApi, backupApi, type ParrocchiaConfig } from '../api/client'
 
 type FormData = Omit<ParrocchiaConfig, 'id' | 'logo_path' | 'updated_at'>
 
 export default function Impostazioni() {
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [saved, setSaved] = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
   const { data: config, isLoading } = useQuery({
@@ -45,9 +45,9 @@ export default function Impostazioni() {
     mutationFn: () => configApi.update(form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['config'] })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
+      toast.success('Impostazioni salvate')
     },
+    onError: () => toast.error('Errore nel salvataggio'),
   })
 
   const logoMut = useMutation({
@@ -55,7 +55,9 @@ export default function Impostazioni() {
     onSuccess: (data) => {
       setLogoPreview(data.logo_url)
       qc.invalidateQueries({ queryKey: ['config'] })
+      toast.success('Logo caricato')
     },
+    onError: () => toast.error('Errore nel caricamento del logo'),
   })
 
   const delLogoMut = useMutation({
@@ -63,7 +65,24 @@ export default function Impostazioni() {
     onSuccess: () => {
       setLogoPreview(null)
       qc.invalidateQueries({ queryKey: ['config'] })
+      toast.success('Logo rimosso')
     },
+    onError: () => toast.error('Errore nella rimozione del logo'),
+  })
+
+  // Backup
+  const { data: backups = [], refetch: refetchBackups } = useQuery({
+    queryKey: ['backups'],
+    queryFn: backupApi.lista,
+  })
+
+  const backupMut = useMutation({
+    mutationFn: backupApi.esegui,
+    onSuccess: (data) => {
+      toast.success(`Backup creato: ${data.filename}`)
+      refetchBackups()
+    },
+    onError: () => toast.error('Errore nella creazione del backup'),
   })
 
   const set = (k: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -73,6 +92,15 @@ export default function Impostazioni() {
     const file = e.target.files?.[0]
     if (file) logoMut.mutate(file)
   }
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
 
   if (isLoading) return <div className="p-8 text-gray-400">Caricamento...</div>
 
@@ -183,11 +211,78 @@ export default function Impostazioni() {
       <button
         onClick={() => saveMut.mutate()}
         disabled={saveMut.isPending}
-        className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 mb-8"
       >
         <Save size={16} />
-        {saveMut.isPending ? 'Salvataggio...' : saved ? 'Salvato!' : 'Salva impostazioni'}
+        {saveMut.isPending ? 'Salvataggio...' : 'Salva impostazioni'}
       </button>
+
+      {/* Backup Section */}
+      <div className="flex items-center gap-3 mb-4">
+        <Database className="text-indigo-600" size={22} />
+        <div>
+          <h2 className="text-lg font-bold text-gray-800">Backup database</h2>
+          <p className="text-gray-500 text-sm">I backup automatici vengono eseguiti ogni notte alle 02:00</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-600">
+            {backups.length === 0
+              ? 'Nessun backup disponibile'
+              : `${backups.length} backup disponibil${backups.length === 1 ? 'e' : 'i'}`}
+          </p>
+          <button
+            onClick={() => backupMut.mutate()}
+            disabled={backupMut.isPending}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+          >
+            <Database size={15} />
+            {backupMut.isPending ? 'Creazione...' : 'Esegui backup ora'}
+          </button>
+        </div>
+
+        {backups.length > 0 && (
+          <div className="border border-gray-100 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    File
+                  </th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Dimensione
+                  </th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Data
+                  </th>
+                  <th className="px-4 py-2.5" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {backups.map((b) => (
+                  <tr key={b.filename} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-700 font-mono text-xs">{b.filename}</td>
+                    <td className="px-4 py-3 text-gray-500">{b.size_kb} KB</td>
+                    <td className="px-4 py-3 text-gray-500">{formatDate(b.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <a
+                        href={backupApi.downloadUrl(b.filename)}
+                        download={b.filename}
+                        className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 text-xs font-medium"
+                      >
+                        <Download size={14} />
+                        Scarica
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

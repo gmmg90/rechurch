@@ -5,6 +5,7 @@ from sqlalchemy import or_, extract
 
 from app.database import get_db
 from app import models, schemas
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/battesimi", tags=["battesimi"])
 
@@ -16,6 +17,7 @@ def list_battesimi(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
 ):
     q = db.query(models.Battesimo)
     if search:
@@ -34,7 +36,11 @@ def list_battesimi(
 
 
 @router.get("/{battesimo_id}", response_model=schemas.BattesimoResponse)
-def get_battesimo(battesimo_id: int, db: Session = Depends(get_db)):
+def get_battesimo(
+    battesimo_id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     obj = db.query(models.Battesimo).filter(models.Battesimo.id == battesimo_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Battesimo non trovato")
@@ -42,7 +48,11 @@ def get_battesimo(battesimo_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=schemas.BattesimoResponse, status_code=201)
-def create_battesimo(data: schemas.BattesimoCreate, db: Session = Depends(get_db)):
+def create_battesimo(
+    data: schemas.BattesimoCreate,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     obj = models.Battesimo(**data.model_dump())
     db.add(obj)
     db.commit()
@@ -51,7 +61,12 @@ def create_battesimo(data: schemas.BattesimoCreate, db: Session = Depends(get_db
 
 
 @router.put("/{battesimo_id}", response_model=schemas.BattesimoResponse)
-def update_battesimo(battesimo_id: int, data: schemas.BattesimoUpdate, db: Session = Depends(get_db)):
+def update_battesimo(
+    battesimo_id: int,
+    data: schemas.BattesimoUpdate,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     obj = db.query(models.Battesimo).filter(models.Battesimo.id == battesimo_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Battesimo non trovato")
@@ -63,7 +78,11 @@ def update_battesimo(battesimo_id: int, data: schemas.BattesimoUpdate, db: Sessi
 
 
 @router.delete("/{battesimo_id}", status_code=204)
-def delete_battesimo(battesimo_id: int, db: Session = Depends(get_db)):
+def delete_battesimo(
+    battesimo_id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     obj = db.query(models.Battesimo).filter(models.Battesimo.id == battesimo_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Battesimo non trovato")

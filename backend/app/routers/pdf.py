@@ -23,6 +23,7 @@ from reportlab.platypus import (
 
 from app.database import get_db
 from app import models
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/pdf", tags=["pdf"])
 
@@ -154,7 +155,11 @@ def _get_config(db: Session) -> models.ParrocchiaConfig:
 # ── Battesimo ─────────────────────────────────────────────────────────────────
 
 @router.get("/battesimo/{id}")
-def pdf_battesimo(id: int, db: Session = Depends(get_db)):
+def pdf_battesimo(
+    id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     r = db.query(models.Battesimo).filter(models.Battesimo.id == id).first()
     if not r:
         raise HTTPException(404, "Battesimo non trovato")
@@ -215,7 +220,11 @@ def pdf_battesimo(id: int, db: Session = Depends(get_db)):
 # ── Cresima ───────────────────────────────────────────────────────────────────
 
 @router.get("/cresima/{id}")
-def pdf_cresima(id: int, db: Session = Depends(get_db)):
+def pdf_cresima(
+    id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     r = db.query(models.Cresima).filter(models.Cresima.id == id).first()
     if not r:
         raise HTTPException(404, "Cresima non trovata")
@@ -278,7 +287,11 @@ def pdf_cresima(id: int, db: Session = Depends(get_db)):
 # ── Matrimonio ────────────────────────────────────────────────────────────────
 
 @router.get("/matrimonio/{id}")
-def pdf_matrimonio(id: int, db: Session = Depends(get_db)):
+def pdf_matrimonio(
+    id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     r = db.query(models.Matrimonio).filter(models.Matrimonio.id == id).first()
     if not r:
         raise HTTPException(404, "Matrimonio non trovato")

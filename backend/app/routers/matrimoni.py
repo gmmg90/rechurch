@@ -5,6 +5,7 @@ from sqlalchemy import or_, extract
 
 from app.database import get_db
 from app import models, schemas
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/matrimoni", tags=["matrimoni"])
 
@@ -16,6 +17,7 @@ def list_matrimoni(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
 ):
     q = db.query(models.Matrimonio)
     if search:
@@ -36,7 +38,11 @@ def list_matrimoni(
 
 
 @router.get("/{matrimonio_id}", response_model=schemas.MatrimonioResponse)
-def get_matrimonio(matrimonio_id: int, db: Session = Depends(get_db)):
+def get_matrimonio(
+    matrimonio_id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     obj = db.query(models.Matrimonio).filter(models.Matrimonio.id == matrimonio_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Matrimonio non trovato")
@@ -44,7 +50,11 @@ def get_matrimonio(matrimonio_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=schemas.MatrimonioResponse, status_code=201)
-def create_matrimonio(data: schemas.MatrimonioCreate, db: Session = Depends(get_db)):
+def create_matrimonio(
+    data: schemas.MatrimonioCreate,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     obj = models.Matrimonio(**data.model_dump())
     db.add(obj)
     db.commit()
@@ -53,7 +63,12 @@ def create_matrimonio(data: schemas.MatrimonioCreate, db: Session = Depends(get_
 
 
 @router.put("/{matrimonio_id}", response_model=schemas.MatrimonioResponse)
-def update_matrimonio(matrimonio_id: int, data: schemas.MatrimonioUpdate, db: Session = Depends(get_db)):
+def update_matrimonio(
+    matrimonio_id: int,
+    data: schemas.MatrimonioUpdate,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     obj = db.query(models.Matrimonio).filter(models.Matrimonio.id == matrimonio_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Matrimonio non trovato")
@@ -65,7 +80,11 @@ def update_matrimonio(matrimonio_id: int, data: schemas.MatrimonioUpdate, db: Se
 
 
 @router.delete("/{matrimonio_id}", status_code=204)
-def delete_matrimonio(matrimonio_id: int, db: Session = Depends(get_db)):
+def delete_matrimonio(
+    matrimonio_id: int,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     obj = db.query(models.Matrimonio).filter(models.Matrimonio.id == matrimonio_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Matrimonio non trovato")

@@ -3,6 +3,48 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+# ─── Auth ─────────────────────────────────────────────────────────────────────
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: "UtenteResponse"
+
+class UtenteBase(BaseModel):
+    nome: str
+    cognome: str
+    email: str
+    ruolo: str = "lettura"
+
+class UtenteCreate(UtenteBase):
+    password: str
+
+class UtenteUpdate(BaseModel):
+    nome: Optional[str] = None
+    cognome: Optional[str] = None
+    email: Optional[str] = None
+    ruolo: Optional[str] = None
+    attivo: Optional[bool] = None
+
+class CambiaPasswordRequest(BaseModel):
+    password_attuale: str
+    nuova_password: str
+
+class UtenteResponse(UtenteBase):
+    id: int
+    attivo: bool
+    ultimo_accesso: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+# update forward ref
+TokenResponse.model_rebuild()
+
+
 # ─── ParrocchiaConfig ─────────────────────────────────────────────────────────
 
 class ParrocchiaConfigUpdate(BaseModel):

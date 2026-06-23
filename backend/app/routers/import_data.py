@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/import", tags=["import"])
 
@@ -116,6 +117,7 @@ async def import_csv(
     file: UploadFile = File(...),
     mapping: str = Form(...),  # JSON string of {field: csv_column}
     db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
 ):
     import json
 
@@ -188,6 +190,7 @@ async def import_csv(
 async def preview_csv(
     tipo: str,
     file: UploadFile = File(...),
+    _: models.Utente = Depends(get_current_user),
 ):
     """Return first 10 rows and column names of a CSV without importing."""
     content = await file.read()
@@ -212,7 +215,10 @@ async def preview_csv(
 # ─── MDB Import ───────────────────────────────────────────────────────────────
 
 @router.post("/mdb")
-async def upload_mdb(file: UploadFile = File(...)):
+async def upload_mdb(
+    file: UploadFile = File(...),
+    _: models.Utente = Depends(get_current_user),
+):
     """Upload an MDB/ACCDB file, detect tables, return table names and sample columns."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Nessun file ricevuto")
@@ -297,6 +303,7 @@ async def upload_mdb(file: UploadFile = File(...)):
 async def confirm_mdb_import(
     payload: Dict[str, Any],
     db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
 ):
     """
     payload: {
@@ -386,7 +393,10 @@ async def confirm_mdb_import(
 
 
 @router.get("/stats")
-def import_stats(db: Session = Depends(get_db)):
+def import_stats(
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     return {
         "battesimi": db.query(models.Battesimo).count(),
         "cresime": db.query(models.Cresima).count(),

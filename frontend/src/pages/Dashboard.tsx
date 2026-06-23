@@ -432,6 +432,7 @@ export default function Dashboard() {
             <>
               <ResponsiveContainer width="100%" height={210}>
                 <PieChart>
+                  {/* @ts-expect-error recharts v3 activeIndex type */}
                   <Pie activeIndex={activeDonut} activeShape={ActiveShape}
                     data={donutData} cx="50%" cy="50%"
                     innerRadius={65} outerRadius={88} dataKey="value"
@@ -467,7 +468,7 @@ export default function Dashboard() {
           { label: 'Aggiungi Battesimo', to: '/battesimi/nuovo', color: 'text-blue-600 bg-blue-50 hover:bg-blue-100', icon: Droplets },
           { label: 'Aggiungi Cresima',   to: '/cresime/nuovo',   color: 'text-amber-600 bg-amber-50 hover:bg-amber-100', icon: Star },
           { label: 'Aggiungi Matrimonio',to: '/matrimoni/nuovo', color: 'text-rose-600 bg-rose-50 hover:bg-rose-100',   icon: Heart },
-        ].map(({ label, to, color, icon: Icon }) => (
+        ].map(({ label, to, color }) => (
           <Link key={to} to={to} className={`flex items-center justify-center gap-2 rounded-xl p-4 font-medium text-sm transition-colors ${color}`}>
             <Plus size={16} /> {label}
           </Link>
