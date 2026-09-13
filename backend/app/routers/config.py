@@ -126,10 +126,16 @@ def sistema_stats(
             mtime = backups[0].stat().st_mtime
             ultimo_backup = datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M")
 
+    # Conteggio utenti escludendo l'account proprietario riservato
+    _utenti_q = db.query(models.Utente).filter(models.Utente.attivo == True)
+    _owner = os.getenv("SUPERADMIN_EMAIL")
+    if _owner:
+        _utenti_q = _utenti_q.filter(models.Utente.email != _owner.strip())
+
     return schemas.SistemaStats(
         versione="2.1.0",
         db_size_mb=db_size_mb,
-        totale_utenti=db.query(models.Utente).filter(models.Utente.attivo == True).count(),
+        totale_utenti=_utenti_q.count(),
         totale_battesimi=db.query(models.Battesimo).count(),
         totale_cresime=db.query(models.Cresima).count(),
         totale_matrimoni=db.query(models.Matrimonio).count(),

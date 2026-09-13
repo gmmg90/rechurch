@@ -112,12 +112,37 @@ Per usarle in locale: `pip install -r backend/requirements-cloud.txt`.
 
 ---
 
+## 2c. Account amministratore di sistema (owner)
+
+ReChurch può avere un **account amministratore di sistema** dedicato all'owner/gestore
+tecnico. È un normale amministratore (pieni poteri) con due particolarità:
+
+- **Non compare** nella pagina *Utenti* (è un account di servizio, tenuto fuori dalla
+  gestione utenti quotidiana per non essere modificato per errore).
+- **Non può essere eliminato o declassato** dagli altri amministratori.
+
+Non ci sono credenziali nel codice: l'account esiste **solo** se imposti queste
+variabili d'ambiente (ed è ricreato/riallineato ad ogni avvio):
+
+- `SUPERADMIN_EMAIL` — email di accesso dell'owner
+- `SUPERADMIN_PASSWORD` — password (scegline una robusta; cambiabile in seguito da *Cambia password*)
+- `SUPERADMIN_NOME` / `SUPERADMIN_COGNOME` — opzionali (default "System" / "Owner")
+
+Se non imposti queste variabili, l'account **non viene creato**. Per revocarlo,
+rimuovi le variabili e disattiva/ricrea il database, oppure cambia l'email.
+
+> Questo è un account di servizio trasparente e documentato, non un accesso occulto:
+> chi amministra il sistema sa che esiste e come è configurato.
+
+---
+
 ## 3. Variabili d'ambiente — riepilogo
 
 | Variabile | Scopo | Default |
 |-----------|-------|---------|
 | `DATABASE_URL` | Connection string DB (Postgres in cloud) | SQLite locale |
 | `SECRET_KEY` | Firma dei token JWT | valore di sviluppo (cambiare!) |
+| `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` | Account admin di sistema (owner), non elencato in Utenti | non creato |
 | `RECHURCH_DESKTOP` | `1` = nessun login (modalità desktop) | non impostato |
 | `AUTH_DISABLED` | `1` = nessun login (come sopra) | non impostato |
 | `PORT` | Porta di ascolto (impostata dall'host) | 8000 |

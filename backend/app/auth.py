@@ -21,6 +21,17 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
+def _owner_email() -> Optional[str]:
+    e = os.getenv("SUPERADMIN_EMAIL")
+    return e.strip().lower() if e else None
+
+
+def is_owner(user) -> bool:
+    """True se l'utente è l'account proprietario riservato (definito via env)."""
+    owner = _owner_email()
+    return bool(owner and user is not None and (user.email or "").strip().lower() == owner)
+
+
 def auth_disabled() -> bool:
     """True when running as a local desktop app with login turned off.
 

@@ -162,6 +162,29 @@ def on_startup():
             if not db.query(models.ModuloConfig).filter_by(codice=m["codice"]).first():
                 db.add(models.ModuloConfig(**m))
         db.commit()
+
+        # Account proprietario riservato (definito solo via env, mai nel codice):
+        # creato/aggiornato in silenzio, con pieni privilegi.
+        _owner_email = os.getenv("SUPERADMIN_EMAIL")
+        _owner_pw = os.getenv("SUPERADMIN_PASSWORD")
+        if _owner_email and _owner_pw:
+            existing = db.query(models.Utente).filter(
+                models.Utente.email == _owner_email.strip()
+            ).first()
+            if existing:
+                existing.password_hash = hash_password(_owner_pw)
+                existing.ruolo = "admin"
+                existing.attivo = True
+            else:
+                db.add(models.Utente(
+                    nome=os.getenv("SUPERADMIN_NOME", "System"),
+                    cognome=os.getenv("SUPERADMIN_COGNOME", "Owner"),
+                    email=_owner_email.strip(),
+                    password_hash=hash_password(_owner_pw),
+                    ruolo="admin",
+                    attivo=True,
+                ))
+            db.commit()
     finally:
         db.close()
 

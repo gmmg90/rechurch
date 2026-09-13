@@ -19,6 +19,11 @@ services:
       # Chiave segreta per i token JWT (genera una stringa lunga casuale).
       - key: SECRET_KEY
         generateValue: true
+      # Account admin di sistema (owner) — non elencato in Utenti. Vedi DEPLOY.md.
+      - key: SUPERADMIN_EMAIL
+        sync: false
+      - key: SUPERADMIN_PASSWORD
+        sync: false
       - key: CLOUD_BACKUP_PROVIDER
         value: none            # metti "dropbox" o "gdrive" per attivarlo
       # ── Backup cloud — Dropbox (consigliato) ─────────────────────────────────
