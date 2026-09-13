@@ -88,6 +88,27 @@ def _row_to_cresima(row: Dict[str, str], mapping: Dict[str, str]) -> Dict[str, A
     }
 
 
+def _row_to_comunione(row: Dict[str, str], mapping: Dict[str, str]) -> Dict[str, Any]:
+    def g(key):
+        col = mapping.get(key)
+        return row.get(col, "").strip() if col else ""
+
+    return {
+        "nome": g("nome"),
+        "cognome": g("cognome"),
+        "data_nascita": _parse_date(g("data_nascita")),
+        "luogo_nascita": g("luogo_nascita") or None,
+        "data_comunione": _parse_date(g("data_comunione")),
+        "luogo_comunione": g("luogo_comunione") or None,
+        "padre_nome": g("padre_nome") or None,
+        "madre_nome": g("madre_nome") or None,
+        "ministro": g("ministro") or None,
+        "numero_registro": g("numero_registro") or None,
+        "anno_registro": _parse_int(g("anno_registro")),
+        "note": g("note") or None,
+    }
+
+
 def _row_to_matrimonio(row: Dict[str, str], mapping: Dict[str, str]) -> Dict[str, Any]:
     def g(key):
         col = mapping.get(key)
@@ -121,8 +142,8 @@ async def import_csv(
 ):
     import json
 
-    if tipo not in ("battesimi", "cresime", "matrimoni"):
-        raise HTTPException(status_code=400, detail="tipo deve essere battesimi, cresime o matrimoni")
+    if tipo not in ("battesimi", "comunioni", "cresime", "matrimoni"):
+        raise HTTPException(status_code=400, detail="tipo deve essere battesimi, comunioni, cresime o matrimoni")
 
     try:
         column_mapping: Dict[str, str] = json.loads(mapping)
@@ -155,6 +176,15 @@ async def import_csv(
                     errors.append(f"Riga {i + 2}: data_battesimo mancante o non valida")
                     continue
                 db.add(models.Battesimo(**data))
+            elif tipo == "comunioni":
+                data = _row_to_comunione(row, column_mapping)
+                if not data["nome"] or not data["cognome"]:
+                    errors.append(f"Riga {i + 2}: nome/cognome mancante")
+                    continue
+                if not data["data_comunione"]:
+                    errors.append(f"Riga {i + 2}: data_comunione mancante o non valida")
+                    continue
+                db.add(models.Comunione(**data))
             elif tipo == "cresime":
                 data = _row_to_cresima(row, column_mapping)
                 if not data["nome"] or not data["cognome"]:
@@ -335,7 +365,7 @@ async def confirm_mdb_import(
         tipo = mapping_entry.get("tipo")
         column_mapping = mapping_entry.get("column_mapping", {})
 
-        if tipo not in ("battesimi", "cresime", "matrimoni"):
+        if tipo not in ("battesimi", "comunioni", "cresime", "matrimoni"):
             total_errors.append(f"Tabella '{table}': tipo non valido '{tipo}'")
             continue
 
@@ -363,6 +393,11 @@ async def confirm_mdb_import(
                     if not data["nome"] or not data["data_battesimo"]:
                         continue
                     db.add(models.Battesimo(**data))
+                elif tipo == "comunioni":
+                    data = _row_to_comunione(row, column_mapping)
+                    if not data["nome"] or not data["data_comunione"]:
+                        continue
+                    db.add(models.Comunione(**data))
                 elif tipo == "cresime":
                     data = _row_to_cresima(row, column_mapping)
                     if not data["nome"] or not data["data_cresima"]:
@@ -399,6 +434,7 @@ def import_stats(
 ):
     return {
         "battesimi": db.query(models.Battesimo).count(),
+        "comunioni": db.query(models.Comunione).count(),
         "cresime": db.query(models.Cresima).count(),
         "matrimoni": db.query(models.Matrimonio).count(),
     }
