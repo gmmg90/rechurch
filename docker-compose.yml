@@ -1,0 +1,48 @@
+# ReChurch — deploy self-hosted su VPS (app + reverse proxy HTTPS)
+# 1) copia .env.compose.example in .env e compila i valori
+# 2) punta il dominio (record A) all'IP del VPS
+# 3) docker compose up -d --build
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      # DB: se vuoto usa SQLite persistente in /data (consigliato per una parrocchia).
+      # Per Postgres, imposta DATABASE_URL nel file .env.
+      - DATABASE_URL=${DATABASE_URL:-}
+      - SECRET_KEY=${SECRET_KEY}
+      - SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL:-}
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:-}
+      - CLOUD_BACKUP_PROVIDER=${CLOUD_BACKUP_PROVIDER:-none}
+      - CLOUD_BACKUP_KEEP=${CLOUD_BACKUP_KEEP:-30}
+      - DROPBOX_APP_KEY=${DROPBOX_APP_KEY:-}
+      - DROPBOX_APP_SECRET=${DROPBOX_APP_SECRET:-}
+      - DROPBOX_REFRESH_TOKEN=${DROPBOX_REFRESH_TOKEN:-}
+      - GDRIVE_CLIENT_ID=${GDRIVE_CLIENT_ID:-}
+      - GDRIVE_CLIENT_SECRET=${GDRIVE_CLIENT_SECRET:-}
+      - GDRIVE_REFRESH_TOKEN=${GDRIVE_REFRESH_TOKEN:-}
+      - GDRIVE_FOLDER_ID=${GDRIVE_FOLDER_ID:-}
+    volumes:
+      - rechurch-data:/data          # DB SQLite, uploads, backup
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data             # certificati Let's Encrypt
+      - caddy-config:/config
+
+volumes:
+  rechurch-data:
+  caddy-data:
+  caddy-config:

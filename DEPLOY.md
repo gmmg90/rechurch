@@ -151,3 +151,46 @@ rimuovi le variabili e disattiva/ricrea il database, oppure cambia l'email.
 
 > In cloud **non** impostare `RECHURCH_DESKTOP`/`AUTH_DISABLED`: il login deve
 > restare attivo perché l'app è esposta pubblicamente.
+
+---
+
+## 4. Self-hosting su VPS con dominio (consigliato per uso serio)
+
+Un VPS ti dà controllo completo, dati sul tuo server e app **sempre accesa** (niente
+"sonno" come sul piano free). Tutto gira in Docker con HTTPS automatico.
+
+### Cosa serve comprare
+1. **VPS** con Ubuntu 22.04/24.04 LTS. Taglia consigliata per una parrocchia:
+   - Minimo: **1 vCPU / 2 GB RAM / 20–40 GB SSD** (~4–6 €/mese)
+   - Comodo: 2 vCPU / 4 GB RAM (build più veloci)
+   - Provider: Hetzner (ottimo prezzo/qualità, datacenter UE), Contabo, OVH, DigitalOcean, Aruba/Register (IT).
+2. **Dominio** (~1–12 €/anno): Namecheap, Cloudflare, Register.it, Aruba.
+3. (Opzionale) **backup off-site**: Dropbox/Google Drive già supportati.
+
+### Passi
+1. Crea il VPS, accedi via SSH, installa Docker:
+   ```bash
+   curl -fsSL https://get.docker.com | sh
+   ```
+2. Punta il dominio al VPS: nel DNS crea un record **A** `parrocchia` → IP del VPS.
+3. Sul VPS clona il repo e configura:
+   ```bash
+   git clone https://github.com/gmmg90/rechurch.git && cd rechurch
+   cp .env.compose.example .env
+   nano .env      # imposta DOMAIN, SECRET_KEY (openssl rand -hex 32), SUPERADMIN_*
+   ```
+4. Avvia:
+   ```bash
+   docker compose up -d --build
+   ```
+   Caddy ottiene il certificato HTTPS da solo. In un minuto l'app è su
+   `https://parrocchia.tuodominio.it` (login iniziale `admin@parrocchia.it` / `admin123`).
+
+### Dati e backup
+- Il database SQLite, gli upload e i backup vivono nel volume Docker `rechurch-data`
+  (persistente). Con `CLOUD_BACKUP_PROVIDER` attivo, ogni notte c'è anche la copia cloud.
+- Aggiornare l'app: `git pull && docker compose up -d --build`.
+- Per usare Postgres invece di SQLite: imposta `DATABASE_URL` nel `.env`.
+
+> SQLite su volume è più che sufficiente per una parrocchia (basso traffico, un solo
+> scrittore). Passa a Postgres solo se prevedi molti utenti concorrenti.

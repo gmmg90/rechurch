@@ -1,0 +1,6 @@
+# Reverse proxy con HTTPS automatico (Let's Encrypt).
+# Il dominio arriva dalla variabile DOMAIN nel file .env.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy app:8000
+}
