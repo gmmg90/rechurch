@@ -31,39 +31,56 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const ALL_NAV_ITEMS = [
-  { to: '/',            label: 'Dashboard',        icon: Home,        end: true,  modulo: null },
-  { to: '/battesimi',   label: 'Battesimi',         icon: Droplets,    end: false, modulo: 'battesimi' },
-  { to: '/comunioni',   label: 'Comunioni',         icon: Wheat,       end: false, modulo: 'comunioni' },
-  { to: '/cresime',     label: 'Cresime',           icon: Star,        end: false, modulo: 'cresime' },
-  { to: '/matrimoni',   label: 'Matrimoni',         icon: Heart,       end: false, modulo: 'matrimoni' },
-  { to: '/rubrica',     label: 'Rubrica',           icon: BookOpen,    end: false, modulo: 'rubrica' },
-  { to: '/contabilita', label: 'Contabilità',       icon: Wallet,      end: false, modulo: 'contabilita' },
-  { to: '/scanner',     label: 'Scanner Docs',      icon: ScanLine,    end: false, modulo: 'scanner' },
-  { to: '/scadenziario',label: 'Scadenziario',      icon: CalendarDays,end: false, modulo: 'scadenziario' },
-  { to: '/certificati', label: 'Modelli Certif.',   icon: FileText,    end: false, modulo: 'certificati' },
-  { to: '/importa',     label: 'Importa Dati',      icon: Upload,      end: false, modulo: 'importa' },
-  { to: '/impostazioni',label: 'Impostazioni',      icon: Settings,    end: false, modulo: null },
+  { to: '/',            label: 'Dashboard',        icon: Home,        end: true,  modulo: null,          desktopOnly: false },
+  { to: '/battesimi',   label: 'Battesimi',         icon: Droplets,    end: false, modulo: 'battesimi',    desktopOnly: false },
+  { to: '/comunioni',   label: 'Comunioni',         icon: Wheat,       end: false, modulo: 'comunioni',    desktopOnly: false },
+  { to: '/cresime',     label: 'Cresime',           icon: Star,        end: false, modulo: 'cresime',      desktopOnly: false },
+  { to: '/matrimoni',   label: 'Matrimoni',         icon: Heart,       end: false, modulo: 'matrimoni',    desktopOnly: false },
+  { to: '/rubrica',     label: 'Rubrica',           icon: BookOpen,    end: false, modulo: 'rubrica',      desktopOnly: false },
+  { to: '/contabilita', label: 'Contabilità',       icon: Wallet,      end: false, modulo: 'contabilita',  desktopOnly: false },
+  { to: '/scanner',     label: 'Scanner Docs',      icon: ScanLine,    end: false, modulo: 'scanner',      desktopOnly: false },
+  { to: '/scadenziario',label: 'Scadenziario',      icon: CalendarDays,end: false, modulo: 'scadenziario', desktopOnly: false },
+  // Attività "da scrivania": nascoste su mobile per uno smartphone più snello
+  { to: '/certificati', label: 'Modelli Certif.',   icon: FileText,    end: false, modulo: 'certificati',  desktopOnly: true },
+  { to: '/importa',     label: 'Importa Dati',      icon: Upload,      end: false, modulo: 'importa',      desktopOnly: true },
+  { to: '/impostazioni',label: 'Impostazioni',      icon: Settings,    end: false, modulo: null,           desktopOnly: true },
 ]
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return isMobile
+}
 
 export default function Layout() {
   const { user, logout } = useAuth()
   const { moduli, isLoading: moduliLoading } = useModuli()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
+  const isMobile = useIsMobile()
 
   // Close the mobile drawer on route change
   useEffect(() => { setDrawerOpen(false) }, [location.pathname])
 
   const navItems = [
     ...ALL_NAV_ITEMS.filter(item => {
+      if (isMobile && item.desktopOnly) return false   // snello su mobile
       if (!item.modulo) return true
       if (moduliLoading) return true
       return moduli[item.modulo] !== false
     }),
-    ...(user?.ruolo === 'admin'
+    // Utenti e Amministrazione: solo admin, e solo su desktop (nascoste su mobile)
+    ...(user?.ruolo === 'admin' && !isMobile
       ? [
-          { to: '/utenti',         label: 'Utenti',          icon: Users,       end: false, modulo: null },
-          { to: '/amministrazione',label: 'Amministrazione', icon: ShieldCheck, end: false, modulo: null },
+          { to: '/utenti',         label: 'Utenti',          icon: Users,       end: false, modulo: null, desktopOnly: true },
+          { to: '/amministrazione',label: 'Amministrazione', icon: ShieldCheck, end: false, modulo: null, desktopOnly: true },
         ]
       : []),
   ]

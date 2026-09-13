@@ -439,15 +439,10 @@ export default function Dashboard() {
         </div>
         <div className="mb-4"><GlobalSearch /></div>
 
+        {/* Mobile snello: solo riepilogo, prossimi eventi e azioni rapide */}
         <div className="space-y-4">
           <Widget>{statsContent}</Widget>
-          <Widget>
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block">Andamento</span>
-            <div className="h-96">{chartContent}</div>
-          </Widget>
-          <Widget>{donutContent}</Widget>
           <Widget><ProssimiEventiWidget /></Widget>
-          <Widget><ContabilitaMeseWidget /></Widget>
           <Widget>{azioniContent}</Widget>
         </div>
       </div>
