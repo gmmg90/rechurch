@@ -10,7 +10,12 @@ RUN npm run build
 FROM python:3.11-slim AS runtime
 WORKDIR /app
 
-# System deps kept minimal; psycopg2-binary/reportlab ship wheels.
+# System deps: mdbtools per l'import dei file Access (.mdb) via import_data.py.
+# (psycopg2-binary/reportlab arrivano come wheel, non servono altre lib.)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends mdbtools \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     RECHURCH_DATA_DIR=/data
