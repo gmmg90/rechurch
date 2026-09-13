@@ -113,11 +113,11 @@ def sistema_stats(
     db: Session = Depends(get_db),
     _: models.Utente = Depends(require_roles("admin")),
 ):
-    backend_dir = Path(__file__).resolve().parent.parent.parent
-    db_path = backend_dir / "rechurch.db"
+    from app.paths import get_db_path, get_data_dir
+    db_path = get_db_path()
     db_size_mb = round(db_path.stat().st_size / 1024 / 1024, 2) if db_path.exists() else 0.0
 
-    backup_dir = backend_dir / "backups"
+    backup_dir = get_data_dir() / "backups"
     ultimo_backup = None
     if backup_dir.exists():
         backups = sorted(backup_dir.glob("rechurch_*.db"), reverse=True)
@@ -127,7 +127,7 @@ def sistema_stats(
             ultimo_backup = datetime.fromtimestamp(mtime).strftime("%d/%m/%Y %H:%M")
 
     return schemas.SistemaStats(
-        versione="2.0.0",
+        versione="2.1.0",
         db_size_mb=db_size_mb,
         totale_utenti=db.query(models.Utente).filter(models.Utente.attivo == True).count(),
         totale_battesimi=db.query(models.Battesimo).count(),

@@ -18,13 +18,25 @@ def get_stats(
     al: Optional[date] = Query(None),
     _: models.Utente = Depends(get_current_user),
 ):
+    dialect = db.bind.dialect.name if db.bind is not None else "sqlite"
+
+    def _period_expr(date_col, fmt: str):
+        """Espressione per raggruppare per periodo, compatibile SQLite e Postgres.
+        fmt: '%Y' (anno) oppure '%Y-%m' (anno-mese)."""
+        if dialect == "sqlite":
+            return func.strftime(fmt, date_col)
+        # Postgres (e altri): to_char con formato equivalente
+        pg_fmt = {"%Y": "YYYY", "%Y-%m": "YYYY-MM"}.get(fmt, "YYYY")
+        return func.to_char(date_col, pg_fmt)
+
     def period_dict(date_col, fmt: str) -> dict[str, int]:
-        q = db.query(func.strftime(fmt, date_col).label("p"), func.count().label("n"))
+        expr = _period_expr(date_col, fmt).label("p")
+        q = db.query(expr, func.count().label("n"))
         if dal:
             q = q.filter(date_col >= dal)
         if al:
             q = q.filter(date_col <= al)
-        return {r.p: r.n for r in q.group_by("p").all() if r.p}
+        return {r.p: r.n for r in q.group_by(expr).all() if r.p}
 
     def count_total(model, date_col):
         q = db.query(model)
