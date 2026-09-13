@@ -1,4 +1,9 @@
 import os
+import mimetypes
+
+# Assicura i MIME corretti per gli asset PWA serviti da FileResponse
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+mimetypes.add_type("text/javascript", ".js")
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
