@@ -49,7 +49,19 @@ def esegui_backup(
     filename = f"rechurch_{timestamp}.db"
     dest = BACKUP_DIR / filename
     shutil.copy2(str(db_path), str(dest))
-    return {"filename": filename, "size_kb": round(dest.stat().st_size / 1024, 2)}
+
+    result = {"filename": filename, "size_kb": round(dest.stat().st_size / 1024, 2)}
+
+    # Upload cloud opzionale (Google Drive / Dropbox); no-op se non configurato.
+    from app.cloud_backup import cloud_backup_enabled, provider_name, upload_backup
+    if cloud_backup_enabled():
+        try:
+            remote_id = upload_backup(dest)
+            result["cloud"] = {"provider": provider_name(), "ok": True, "id": remote_id}
+        except Exception as e:
+            result["cloud"] = {"provider": provider_name(), "ok": False, "error": str(e)}
+
+    return result
 
 
 @router.get("/lista")

@@ -1,0 +1,35 @@
+# Blueprint Render — deploy gratuito di ReChurch (web app accessibile da fuori).
+# Vai su https://render.com → New → Blueprint → collega questo repo.
+#
+# Persistenza: il piano free NON ha disco persistente, quindi usa un database
+# Postgres gratuito e persistente (Neon o Supabase) e incollane la connection
+# string in DATABASE_URL. Vedi DEPLOY.md.
+services:
+  - type: web
+    name: rechurch
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # Postgres persistente e gratuito (Neon/Supabase). Esempio:
+      # postgresql://utente:password@host/dbname?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      # Chiave segreta per i token JWT (genera una stringa lunga casuale).
+      - key: SECRET_KEY
+        generateValue: true
+      # ── Backup cloud (opzionale) — Google Drive ──────────────────────────────
+      - key: CLOUD_BACKUP_PROVIDER
+        value: none            # metti "gdrive" o "dropbox" per attivarlo
+      - key: GDRIVE_FOLDER_ID
+        sync: false
+      - key: GDRIVE_SERVICE_ACCOUNT_INFO
+        sync: false            # incolla qui il JSON del service account
+      # ── Backup cloud (opzionale) — Dropbox ───────────────────────────────────
+      - key: DROPBOX_APP_KEY
+        sync: false
+      - key: DROPBOX_APP_SECRET
+        sync: false
+      - key: DROPBOX_REFRESH_TOKEN
+        sync: false
