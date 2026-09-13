@@ -109,7 +109,7 @@ function CsvImport() {
 
           <div className="bg-white rounded-xl border border-gray-100 p-4">
             <p className="text-sm font-medium text-gray-700 mb-3">Mappatura colonne</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {fieldsForTipo(tipo).map(field => (
                 <div key={field} className="flex items-center gap-2">
                   <span className="text-xs text-gray-500 w-36 shrink-0">{field}</span>
@@ -287,7 +287,7 @@ function MdbImport() {
                     <option value="matrimoni">Matrimoni</option>
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {fields.map(field => (
                     <div key={field} className="flex items-center gap-2">
                       <span className="text-xs text-gray-500 w-36 shrink-0">{field}</span>
@@ -356,7 +356,7 @@ export default function ImportaDati() {
   const [tab, setTab] = useState<'csv' | 'mdb'>('csv')
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-8 max-w-4xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Importa Dati</h1>
         <p className="text-gray-500 text-sm mt-1">Migra i dati dal tuo database Access</p>

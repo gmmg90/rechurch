@@ -136,7 +136,7 @@ export default function PersonaForm() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-8 max-w-3xl">
       <button
         onClick={() => navigate('/rubrica')}
         className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6"
@@ -149,7 +149,7 @@ export default function PersonaForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
         {/* Nome e Cognome */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Nome *" error={errors.nome?.message}>
             <input {...register('nome', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
@@ -195,7 +195,7 @@ export default function PersonaForm() {
         <hr className="border-gray-100" />
 
         {/* Contatti */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Telefono">
             <input {...register('telefono')} className={inputCls} />
           </Field>

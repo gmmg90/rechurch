@@ -54,7 +54,7 @@ export default function MatrimonioForm() {
   const isPending = create.isPending || update.isPending
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-8 max-w-3xl">
       <button onClick={() => navigate('/matrimoni')} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
         <ChevronLeft size={16} /> Matrimoni
       </button>
@@ -63,7 +63,7 @@ export default function MatrimonioForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Sposo</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Nome *" error={errors.sposo_nome?.message}>
               <input {...register('sposo_nome', { required: 'Campo obbligatorio' })} className={inputCls} />
             </Field>
@@ -76,7 +76,7 @@ export default function MatrimonioForm() {
         <hr className="border-gray-100" />
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Sposa</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Nome *" error={errors.sposa_nome?.message}>
               <input {...register('sposa_nome', { required: 'Campo obbligatorio' })} className={inputCls} />
             </Field>
@@ -87,7 +87,7 @@ export default function MatrimonioForm() {
         </div>
 
         <hr className="border-gray-100" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Data matrimonio *" error={errors.data_matrimonio?.message}>
             <input type="date" {...register('data_matrimonio', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
@@ -97,7 +97,7 @@ export default function MatrimonioForm() {
           <Field label="Ministro *" error={errors.ministro?.message}>
             <input {...register('ministro', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="N. Registro">
               <input {...register('numero_registro')} className={inputCls} />
             </Field>
@@ -108,7 +108,7 @@ export default function MatrimonioForm() {
         </div>
 
         <hr className="border-gray-100" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Testimone 1">
             <input {...register('testimone1_nome')} className={inputCls} />
           </Field>

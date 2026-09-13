@@ -156,10 +156,10 @@ export default function Utenti() {
     })
   }
 
-  if (isLoading) return <div className="p-8 text-gray-400">Caricamento...</div>
+  if (isLoading) return <div className="p-4 sm:p-8 text-gray-400">Caricamento...</div>
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Users className="text-indigo-600" size={24} />
@@ -296,7 +296,7 @@ export default function Utenti() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
                   <input

@@ -241,16 +241,16 @@ export default function FamigliaDetail() {
   })
 
   if (isLoading) {
-    return <div className="p-8 text-gray-400">Caricamento...</div>
+    return <div className="p-4 sm:p-8 text-gray-400">Caricamento...</div>
   }
   if (!data) {
-    return <div className="p-8 text-gray-400">Famiglia non trovata</div>
+    return <div className="p-4 sm:p-8 text-gray-400">Famiglia non trovata</div>
   }
 
   const persone: Persona[] = data.persone ?? []
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-8 max-w-4xl">
       <button
         onClick={() => navigate('/rubrica')}
         className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6"
@@ -277,7 +277,7 @@ export default function FamigliaDetail() {
       {/* Info */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
         <h2 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wide">Informazioni</h2>
-        <dl className="grid grid-cols-2 gap-y-2 text-sm">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 text-sm">
           <div className="flex gap-2">
             <dt className="text-gray-500 w-24 flex-shrink-0">Indirizzo</dt>
             <dd className="text-gray-800">{data.indirizzo ?? '—'}</dd>
@@ -314,7 +314,7 @@ export default function FamigliaDetail() {
         </div>
 
         {persone.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Nessun membro in questa famiglia</div>
+          <div className="p-4 sm:p-8 text-center text-gray-400 text-sm">Nessun membro in questa famiglia</div>
         ) : (
           <table className="w-full text-sm">
             <thead>

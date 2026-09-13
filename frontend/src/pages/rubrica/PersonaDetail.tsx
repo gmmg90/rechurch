@@ -166,10 +166,10 @@ export default function PersonaDetail() {
   })
 
   if (isLoading) {
-    return <div className="p-8 text-gray-400">Caricamento...</div>
+    return <div className="p-4 sm:p-8 text-gray-400">Caricamento...</div>
   }
   if (!persona) {
-    return <div className="p-8 text-gray-400">Persona non trovata</div>
+    return <div className="p-4 sm:p-8 text-gray-400">Persona non trovata</div>
   }
 
   const initials = `${persona.nome.charAt(0)}${persona.cognome.charAt(0)}`.toUpperCase()
@@ -184,7 +184,7 @@ export default function PersonaDetail() {
   }
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 sm:p-8 max-w-4xl">
       <button
         onClick={() => navigate('/rubrica')}
         className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6"

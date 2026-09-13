@@ -195,7 +195,7 @@ export default function ContabilitaList() {
   const saldoPositivo = saldo >= 0
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -312,9 +312,9 @@ export default function ContabilitaList() {
           </div>
 
           {loadingMovimenti ? (
-            <div className="p-8 text-center text-gray-400">Caricamento...</div>
+            <div className="p-4 sm:p-8 text-center text-gray-400">Caricamento...</div>
           ) : movimenti.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Nessun movimento trovato</div>
+            <div className="p-4 sm:p-8 text-center text-gray-400">Nessun movimento trovato</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -405,9 +405,9 @@ export default function ContabilitaList() {
           </div>
 
           {loadingCat ? (
-            <div className="p-8 text-center text-gray-400">Caricamento...</div>
+            <div className="p-4 sm:p-8 text-center text-gray-400">Caricamento...</div>
           ) : categorie.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Nessuna categoria</div>
+            <div className="p-4 sm:p-8 text-center text-gray-400">Nessuna categoria</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -482,9 +482,9 @@ export default function ContabilitaList() {
           </div>
 
           {loadingForn ? (
-            <div className="p-8 text-center text-gray-400">Caricamento...</div>
+            <div className="p-4 sm:p-8 text-center text-gray-400">Caricamento...</div>
           ) : fornitori.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">Nessun fornitore</div>
+            <div className="p-4 sm:p-8 text-center text-gray-400">Nessun fornitore</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -611,7 +611,7 @@ export default function ContabilitaList() {
             <h2 className="text-lg font-bold text-gray-800 mb-4">
               {editingForn ? 'Modifica Fornitore' : 'Nuovo Fornitore'}
             </h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
                 <input

@@ -148,11 +148,11 @@ export default function MovimentoForm() {
   const hasExistingAllegato = isEdit && existing?.allegato_nome
 
   if (isEdit && loadingExisting) {
-    return <div className="p-8 text-gray-400">Caricamento...</div>
+    return <div className="p-4 sm:p-8 text-gray-400">Caricamento...</div>
   }
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-8 max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
@@ -172,7 +172,7 @@ export default function MovimentoForm() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
 
         {/* Data + Tipo */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data *</label>
             <input
@@ -241,7 +241,7 @@ export default function MovimentoForm() {
         </div>
 
         {/* Categoria + Fornitore */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
             <select
@@ -271,7 +271,7 @@ export default function MovimentoForm() {
         </div>
 
         {/* N° Documento + Metodo Pagamento */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">N° Documento</label>
             <input

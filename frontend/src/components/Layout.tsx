@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Church,
   Home,
@@ -16,6 +17,8 @@ import {
   ShieldCheck,
   Wheat,
   FileText,
+  Menu,
+  X,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useModuli } from '../contexts/ModuliContext'
@@ -45,9 +48,13 @@ const ALL_NAV_ITEMS = [
 export default function Layout() {
   const { user, logout } = useAuth()
   const { moduli, isLoading: moduliLoading } = useModuli()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const location = useLocation()
+
+  // Close the mobile drawer on route change
+  useEffect(() => { setDrawerOpen(false) }, [location.pathname])
 
   const navItems = [
-    // Filter by active modules (if module not found in DB yet, default to showing)
     ...ALL_NAV_ITEMS.filter(item => {
       if (!item.modulo) return true
       if (moduliLoading) return true
@@ -69,11 +76,34 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <aside className="w-64 bg-indigo-900 flex flex-col">
+      {/* Backdrop (mobile only, when drawer open) */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar — static on desktop, slide-in drawer on mobile */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-indigo-900 flex flex-col transform transition-transform duration-200 md:static md:translate-x-0 ${
+          drawerOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-indigo-800">
-          <Church className="text-indigo-300" size={28} />
-          <span className="text-white font-bold text-xl tracking-tight">ReChurch</span>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-indigo-800">
+          <div className="flex items-center gap-3">
+            <Church className="text-indigo-300" size={28} />
+            <span className="text-white font-bold text-xl tracking-tight">ReChurch</span>
+          </div>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            className="md:hidden text-indigo-300 hover:text-white"
+            aria-label="Chiudi menu"
+          >
+            <X size={22} />
+          </button>
         </div>
 
         {/* Nav */}
@@ -127,9 +157,23 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
+      {/* Main column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile top bar */}
+        <header className="md:hidden flex items-center gap-3 bg-indigo-900 text-white px-4 py-3 sticky top-0 z-20">
+          <button onClick={() => setDrawerOpen(true)} aria-label="Apri menu">
+            <Menu size={24} />
+          </button>
+          <div className="flex items-center gap-2">
+            <Church className="text-indigo-300" size={22} />
+            <span className="font-bold text-lg">ReChurch</span>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }

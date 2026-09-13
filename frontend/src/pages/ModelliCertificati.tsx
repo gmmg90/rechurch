@@ -110,7 +110,7 @@ export default function ModelliCertificati() {
   const previewUrl = `${reportTemplatesApi.previewUrl(tipo)}&_=${previewKey}`
 
   return (
-    <div className="p-8 max-w-7xl">
+    <div className="p-4 sm:p-8 max-w-7xl">
       <button
         onClick={() => navigate('/impostazioni')}
         className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-4"

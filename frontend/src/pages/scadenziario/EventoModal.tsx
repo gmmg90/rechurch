@@ -128,7 +128,7 @@ export default function EventoModal({ evento, defaultStart, categorie, onClose, 
             <label htmlFor="tutto_il_giorno" className="text-sm text-gray-700">Tutto il giorno</label>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Inizio *</label>
               <input
@@ -165,7 +165,7 @@ export default function EventoModal({ evento, defaultStart, categorie, onClose, 
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Ricorrenza</label>
               <select value={form.ricorrenza} onChange={set('ricorrenza')}

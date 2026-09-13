@@ -115,7 +115,7 @@ export default function Amministrazione() {
   ].sort((a, b) => a.giorni - b.giorni)
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-8 max-w-5xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
@@ -157,7 +157,7 @@ export default function Amministrazione() {
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Moduli attivi</h2>
             <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
               {moduliLoading ? (
-                <div className="p-8 text-center text-gray-400 text-sm">Caricamento moduli...</div>
+                <div className="p-4 sm:p-8 text-center text-gray-400 text-sm">Caricamento moduli...</div>
               ) : (
                 moduliList.map(modulo => {
                   const Icon = ICONE[modulo.icona ?? ''] ?? Church
