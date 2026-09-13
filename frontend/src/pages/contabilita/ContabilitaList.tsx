@@ -10,6 +10,22 @@ type Tab = 'movimenti' | 'categorie' | 'fornitori'
 const formatEur = (amount: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount)
 
+async function scaricaAllegato(id: number, nome?: string) {
+  try {
+    const blob = await contabilitaApi.downloadAllegato(id)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nome || 'allegato'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  } catch {
+    toast.error('Impossibile aprire l\'allegato')
+  }
+}
+
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('it-IT')
 
@@ -353,15 +369,13 @@ export default function ContabilitaList() {
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
                           {m.allegato_nome && (
-                            <a
-                              href={contabilitaApi.getAllegatoUrl(m.id)}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              onClick={() => scaricaAllegato(m.id, m.allegato_nome)}
                               className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                               title={`Allegato: ${m.allegato_nome}`}
                             >
                               <Paperclip size={15} />
-                            </a>
+                            </button>
                           )}
                           <button
                             onClick={() => navigate(`/contabilita/${m.id}/modifica`)}

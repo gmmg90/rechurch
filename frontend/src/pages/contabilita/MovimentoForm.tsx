@@ -7,6 +7,22 @@ import { contabilitaApi } from '../../api/client'
 
 const today = () => new Date().toISOString().split('T')[0]
 
+async function scaricaAllegato(id: number, nome?: string) {
+  try {
+    const blob = await contabilitaApi.downloadAllegato(id)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nome || 'allegato'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  } catch {
+    toast.error('Impossibile aprire l\'allegato')
+  }
+}
+
 interface FormState {
   data: string
   tipo: 'entrata' | 'uscita'
@@ -319,15 +335,14 @@ export default function MovimentoForm() {
             <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg mb-3">
               <span className="text-indigo-500">{fileIcon(existing.allegato_nome!)}</span>
               <span className="text-sm text-indigo-800 flex-1 truncate">{existing.allegato_nome}</span>
-              <a
-                href={contabilitaApi.getAllegatoUrl(Number(id))}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={() => scaricaAllegato(Number(id), existing.allegato_nome!)}
                 className="p-1.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
                 title="Scarica"
               >
                 <Download size={15} />
-              </a>
+              </button>
               <button
                 type="button"
                 onClick={() => delAllegato.mutate()}

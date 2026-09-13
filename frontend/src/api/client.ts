@@ -537,6 +537,10 @@ export const contabilitaApi = {
     }).then(r => r.data)
   },
   getAllegatoUrl: (id: number) => `${api.defaults.baseURL}/contabilita/movimenti/${id}/allegato`,
+  // Scarica l'allegato via axios (col token JWT) come blob — un <a href> semplice
+  // non invierebbe l'header di autenticazione e verrebbe rifiutato (401).
+  downloadAllegato: (id: number) =>
+    api.get(`/contabilita/movimenti/${id}/allegato`, { responseType: 'blob' }).then(r => r.data as Blob),
   deleteAllegato: (id: number) => api.delete(`/contabilita/movimenti/${id}/allegato`),
 
   riepilogo: (params?: { dal?: string; al?: string }) =>
