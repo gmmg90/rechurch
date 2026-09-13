@@ -14,6 +14,8 @@ import {
   CalendarDays,
   ScanLine,
   ShieldCheck,
+  Wheat,
+  FileText,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useModuli } from '../contexts/ModuliContext'
@@ -28,12 +30,14 @@ const ROLE_LABELS: Record<string, string> = {
 const ALL_NAV_ITEMS = [
   { to: '/',            label: 'Dashboard',        icon: Home,        end: true,  modulo: null },
   { to: '/battesimi',   label: 'Battesimi',         icon: Droplets,    end: false, modulo: 'battesimi' },
+  { to: '/comunioni',   label: 'Comunioni',         icon: Wheat,       end: false, modulo: 'comunioni' },
   { to: '/cresime',     label: 'Cresime',           icon: Star,        end: false, modulo: 'cresime' },
   { to: '/matrimoni',   label: 'Matrimoni',         icon: Heart,       end: false, modulo: 'matrimoni' },
   { to: '/rubrica',     label: 'Rubrica',           icon: BookOpen,    end: false, modulo: 'rubrica' },
   { to: '/contabilita', label: 'Contabilità',       icon: Wallet,      end: false, modulo: 'contabilita' },
   { to: '/scanner',     label: 'Scanner Docs',      icon: ScanLine,    end: false, modulo: 'scanner' },
   { to: '/scadenziario',label: 'Scadenziario',      icon: CalendarDays,end: false, modulo: 'scadenziario' },
+  { to: '/certificati', label: 'Modelli Certif.',   icon: FileText,    end: false, modulo: 'certificati' },
   { to: '/importa',     label: 'Importa Dati',      icon: Upload,      end: false, modulo: 'importa' },
   { to: '/impostazioni',label: 'Impostazioni',      icon: Settings,    end: false, modulo: null },
 ]
@@ -119,7 +123,7 @@ export default function Layout() {
             Esci
           </button>
 
-          <p className="text-indigo-500 text-xs px-1">ReChurch v2.0</p>
+          <p className="text-indigo-500 text-xs px-1">ReChurch v2.1</p>
         </div>
       </aside>
 

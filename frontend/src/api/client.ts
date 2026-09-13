@@ -74,13 +74,37 @@ export interface Matrimonio {
   id: number
   sposo_nome: string
   sposo_cognome: string
+  sposo_luogo_nascita?: string
+  sposo_data_nascita?: string
   sposa_nome: string
   sposa_cognome: string
+  sposa_luogo_nascita?: string
+  sposa_data_nascita?: string
   data_matrimonio: string
   luogo_matrimonio: string
   testimone1_nome?: string
   testimone2_nome?: string
+  testimone3_nome?: string
+  testimone4_nome?: string
   ministro: string
+  numero_registro?: string
+  anno_registro?: number
+  note?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Comunione {
+  id: number
+  nome: string
+  cognome: string
+  data_nascita?: string
+  luogo_nascita?: string
+  data_comunione: string
+  luogo_comunione?: string
+  padre_nome?: string
+  madre_nome?: string
+  ministro?: string
   numero_registro?: string
   anno_registro?: number
   note?: string
@@ -152,6 +176,22 @@ export const matrimoniApi = {
   delete: (id: number) => api.delete(`/matrimoni/${id}`),
   anniversariProssimi: (giorni = 30) =>
     api.get<Anniversario[]>('/matrimoni/anniversari-prossimi/', { params: { giorni } }).then(r => r.data),
+}
+
+export const comunioniApi = {
+  list: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+    api.get<Comunione[]>('/comunioni/', { params }).then(r => r.data),
+  listWithTotal: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+    api.get<Comunione[]>('/comunioni/', { params }).then(r => ({
+      data: r.data,
+      total: parseInt(r.headers['x-total-count'] ?? '0', 10),
+    })),
+  get: (id: number) => api.get<Comunione>(`/comunioni/${id}`).then(r => r.data),
+  create: (data: Omit<Comunione, 'id' | 'created_at' | 'updated_at'>) =>
+    api.post<Comunione>('/comunioni/', data).then(r => r.data),
+  update: (id: number, data: Partial<Comunione>) =>
+    api.put<Comunione>(`/comunioni/${id}`, data).then(r => r.data),
+  delete: (id: number) => api.delete(`/comunioni/${id}`),
 }
 
 export const statsApi = {
@@ -234,9 +274,50 @@ export const configApi = {
 }
 
 export const pdfApi = {
-  battesimoUrl: (id: number) => `/api/pdf/battesimo/${id}`,
-  cresimaUrl:   (id: number) => `/api/pdf/cresima/${id}`,
-  matrimonioUrl:(id: number) => `/api/pdf/matrimonio/${id}`,
+  // Download (Content-Disposition: attachment)
+  battesimoUrl:  (id: number) => `/api/pdf/battesimo/${id}`,
+  comunioneUrl:  (id: number) => `/api/pdf/comunione/${id}`,
+  cresimaUrl:    (id: number) => `/api/pdf/cresima/${id}`,
+  matrimonioUrl: (id: number) => `/api/pdf/matrimonio/${id}`,
+  // Inline view (apre nel browser)
+  battesimoView:  (id: number) => `/api/pdf/battesimo/${id}?inline=1`,
+  comunioneView:  (id: number) => `/api/pdf/comunione/${id}?inline=1`,
+  cresimaView:    (id: number) => `/api/pdf/cresima/${id}?inline=1`,
+  matrimonioView: (id: number) => `/api/pdf/matrimonio/${id}?inline=1`,
+  // Stampa elenco (lista filtrata)
+  elencoView: (tipo: 'battesimi' | 'comunioni' | 'cresime' | 'matrimoni', params: Record<string, string | number | undefined>) => {
+    const q = new URLSearchParams({ inline: '1' })
+    Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') q.append(k, String(v)) })
+    return `/api/pdf/elenco/${tipo}?${q.toString()}`
+  },
+}
+
+export interface ReportTemplate {
+  tipo: string
+  titolo?: string
+  intro?: string
+  body?: string
+  chiusura?: string
+  firma_label?: string
+  updated_at?: string
+}
+
+export interface Placeholder {
+  key: string
+  label: string
+}
+
+export const reportTemplatesApi = {
+  list: () => api.get<ReportTemplate[]>('/report-templates/').then(r => r.data),
+  // Preview URL already carries a query string so callers can append `&_=<n>` cache-busters.
+  previewUrl: (tipo: string) => `/api/pdf/preview/${tipo}?inline=true`,
+  get: (tipo: string) => api.get<ReportTemplate>(`/report-templates/${tipo}`).then(r => r.data),
+  update: (tipo: string, data: Partial<ReportTemplate>) =>
+    api.put<ReportTemplate>(`/report-templates/${tipo}`, data).then(r => r.data),
+  reset: (tipo: string) =>
+    api.post<ReportTemplate>(`/report-templates/${tipo}/reset`).then(r => r.data),
+  placeholders: (tipo: string) =>
+    api.get<{ tipo: string; placeholders: Placeholder[] }>(`/report-templates/${tipo}/placeholders`).then(r => r.data),
 }
 
 export const importApi = {

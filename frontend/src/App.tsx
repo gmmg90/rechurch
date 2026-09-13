@@ -11,6 +11,10 @@ import CresimeList from './pages/cresime/CresimeList'
 import CresimaForm from './pages/cresime/CresimaForm'
 import MatrimoniList from './pages/matrimoni/MatrimoniList'
 import MatrimonioForm from './pages/matrimoni/MatrimonioForm'
+import ComunioniList from './pages/comunioni/ComunioniList'
+import ComunioneForm from './pages/comunioni/ComunioneForm'
+import ModelliCertificati from './pages/ModelliCertificati'
+import CertificatoView from './pages/CertificatoView'
 import ImportaDati from './pages/ImportaDati'
 import Impostazioni from './pages/Impostazioni'
 import Utenti from './pages/Utenti'
@@ -52,6 +56,14 @@ export default function App() {
           <Route path="matrimoni" element={<MatrimoniList />} />
           <Route path="matrimoni/nuovo" element={<MatrimonioForm />} />
           <Route path="matrimoni/:id/modifica" element={<MatrimonioForm />} />
+          <Route path="comunioni" element={<ComunioniList />} />
+          <Route path="comunioni/nuovo" element={<ComunioneForm />} />
+          <Route path="comunioni/:id/modifica" element={<ComunioneForm />} />
+          <Route path="certificati" element={<ModelliCertificati />} />
+          <Route path="battesimi/:id/certificato" element={<CertificatoView tipo="battesimi" />} />
+          <Route path="comunioni/:id/certificato" element={<CertificatoView tipo="comunioni" />} />
+          <Route path="cresime/:id/certificato" element={<CertificatoView tipo="cresime" />} />
+          <Route path="matrimoni/:id/certificato" element={<CertificatoView tipo="matrimoni" />} />
           <Route path="importa" element={<ImportaDati />} />
           <Route path="rubrica" element={<RubricaList />} />
           <Route path="rubrica/persone/nuova" element={<PersonaForm />} />
