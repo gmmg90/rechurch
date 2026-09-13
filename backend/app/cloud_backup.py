@@ -60,8 +60,47 @@ def upload_backup(local_path: Path) -> str | None:
 
 
 # ── Google Drive ──────────────────────────────────────────────────────────────
-def _upload_gdrive(local_path: Path) -> str:
+def _gdrive_credentials():
+    """Costruisce le credenziali Google Drive.
+
+    Due metodi supportati:
+      1. OAuth utente (consigliato per Gmail personale): usa lo spazio del tuo
+         account. Richiede GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET, GDRIVE_REFRESH_TOKEN.
+      2. Service account (Google Workspace / Shared Drive): GDRIVE_SERVICE_ACCOUNT_INFO
+         (JSON inline) oppure GDRIVE_SERVICE_ACCOUNT_JSON (percorso file).
+    """
+    scopes = ["https://www.googleapis.com/auth/drive.file"]
+
+    client_id = os.getenv("GDRIVE_CLIENT_ID")
+    client_secret = os.getenv("GDRIVE_CLIENT_SECRET")
+    refresh_token = os.getenv("GDRIVE_REFRESH_TOKEN")
+    if client_id and client_secret and refresh_token:
+        from google.oauth2.credentials import Credentials
+        return Credentials(
+            token=None,
+            refresh_token=refresh_token,
+            client_id=client_id,
+            client_secret=client_secret,
+            token_uri="https://oauth2.googleapis.com/token",
+            scopes=scopes,
+        )
+
     from google.oauth2 import service_account
+    info_env = os.getenv("GDRIVE_SERVICE_ACCOUNT_INFO")
+    json_path = os.getenv("GDRIVE_SERVICE_ACCOUNT_JSON")
+    if info_env:
+        import json
+        return service_account.Credentials.from_service_account_info(json.loads(info_env), scopes=scopes)
+    if json_path:
+        return service_account.Credentials.from_service_account_file(json_path, scopes=scopes)
+
+    raise RuntimeError(
+        "Credenziali Google mancanti: imposta GDRIVE_CLIENT_ID/SECRET/REFRESH_TOKEN "
+        "(OAuth, consigliato) oppure GDRIVE_SERVICE_ACCOUNT_INFO/_JSON (service account)"
+    )
+
+
+def _upload_gdrive(local_path: Path) -> str:
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
 
@@ -69,18 +108,7 @@ def _upload_gdrive(local_path: Path) -> str:
     if not folder_id:
         raise RuntimeError("GDRIVE_FOLDER_ID non impostato")
 
-    info_env = os.getenv("GDRIVE_SERVICE_ACCOUNT_INFO")
-    json_path = os.getenv("GDRIVE_SERVICE_ACCOUNT_JSON")
-    scopes = ["https://www.googleapis.com/auth/drive.file"]
-
-    if info_env:
-        import json
-        creds = service_account.Credentials.from_service_account_info(json.loads(info_env), scopes=scopes)
-    elif json_path:
-        creds = service_account.Credentials.from_service_account_file(json_path, scopes=scopes)
-    else:
-        raise RuntimeError("Credenziali Google mancanti (GDRIVE_SERVICE_ACCOUNT_JSON o _INFO)")
-
+    creds = _gdrive_credentials()
     service = build("drive", "v3", credentials=creds, cache_discovery=False)
     metadata = {"name": local_path.name, "parents": [folder_id]}
     media = MediaFileUpload(str(local_path), mimetype="application/octet-stream", resumable=False)

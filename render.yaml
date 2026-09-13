@@ -19,17 +19,21 @@ services:
       # Chiave segreta per i token JWT (genera una stringa lunga casuale).
       - key: SECRET_KEY
         generateValue: true
-      # ── Backup cloud (opzionale) — Google Drive ──────────────────────────────
       - key: CLOUD_BACKUP_PROVIDER
-        value: none            # metti "gdrive" o "dropbox" per attivarlo
-      - key: GDRIVE_FOLDER_ID
-        sync: false
-      - key: GDRIVE_SERVICE_ACCOUNT_INFO
-        sync: false            # incolla qui il JSON del service account
-      # ── Backup cloud (opzionale) — Dropbox ───────────────────────────────────
+        value: none            # metti "dropbox" o "gdrive" per attivarlo
+      # ── Backup cloud — Dropbox (consigliato) ─────────────────────────────────
       - key: DROPBOX_APP_KEY
         sync: false
       - key: DROPBOX_APP_SECRET
         sync: false
       - key: DROPBOX_REFRESH_TOKEN
+        sync: false
+      # ── Backup cloud — Google Drive (OAuth utente, per Gmail personale) ───────
+      - key: GDRIVE_CLIENT_ID
+        sync: false
+      - key: GDRIVE_CLIENT_SECRET
+        sync: false
+      - key: GDRIVE_REFRESH_TOKEN
+        sync: false
+      - key: GDRIVE_FOLDER_ID
         sync: false

@@ -54,27 +54,58 @@ Variabili comuni:
 - `CLOUD_BACKUP_PROVIDER` = `gdrive` | `dropbox` | `none`
 - `CLOUD_BACKUP_KEEP` = quanti backup tenere nel cloud (default 30)
 
-### 2a. Google Drive (service account)
-1. Su <https://console.cloud.google.com> crea un progetto → abilita **Google Drive API**.
-2. Crea un **Service Account** → genera una chiave **JSON**.
-3. In Google Drive crea una cartella (es. "ReChurch Backup") e **condividila**
-   (come Editor) con l'email del service account (`...@...iam.gserviceaccount.com`).
-4. Copia l'**ID della cartella** dall'URL (`https://drive.google.com/drive/folders/<QUESTO_ID>`).
-5. Imposta le variabili:
-   - `CLOUD_BACKUP_PROVIDER=gdrive`
-   - `GDRIVE_FOLDER_ID=<id cartella>`
-   - `GDRIVE_SERVICE_ACCOUNT_INFO=<contenuto del file JSON>` (incolla il JSON intero)
-     — in alternativa `GDRIVE_SERVICE_ACCOUNT_JSON=/percorso/al/file.json`
+### 2a. Dropbox — consigliato per account personali
+Più semplice e affidabile di Google Drive per un account normale (nessun problema
+di quota, cartella dedicata isolata).
 
-### 2b. Dropbox (refresh token)
-1. Su <https://www.dropbox.com/developers/apps> crea un'app (Scoped access, App folder).
-2. Aggiungi il permesso `files.content.write` e genera un **refresh token** (OAuth).
-3. Imposta le variabili:
+1. Vai su <https://www.dropbox.com/developers/apps> → **Create app**:
+   - *Scoped access* → *App folder* → dai un nome (es. `ReChurch`).
+2. Tab **Permissions**: spunta `files.content.write` e `files.content.read` → **Submit**.
+3. Tab **Settings**: copia **App key** e **App secret**.
+4. Genera il **refresh token** (una volta sola), nel browser:
+   a. Apri questo URL (metti la tua App key al posto di `APPKEY`):
+      `https://www.dropbox.com/oauth2/authorize?client_id=APPKEY&token_access_type=offline&response_type=code`
+   b. Autorizza → copia il **codice** che ti mostra.
+   c. Scambia il codice con un refresh token (da terminale, sostituendo i valori):
+      ```bash
+      curl https://api.dropbox.com/oauth2/token \
+        -d code=IL_CODICE -d grant_type=authorization_code \
+        -u APPKEY:APPSECRET
+      ```
+      Nella risposta JSON copia il valore di `refresh_token`.
+5. Imposta le variabili (su Render → servizio → *Environment*):
    - `CLOUD_BACKUP_PROVIDER=dropbox`
    - `DROPBOX_APP_KEY=...`
    - `DROPBOX_APP_SECRET=...`
    - `DROPBOX_REFRESH_TOKEN=...`
    - `DROPBOX_FOLDER=/ReChurch` (opzionale)
+
+### 2b. Google Drive — OAuth utente (per Gmail personale)
+Usa lo spazio del tuo account Google. (I *service account* non funzionano col Drive
+personale per limiti di quota: usa questo metodo OAuth.)
+
+1. Su <https://console.cloud.google.com> crea un progetto → abilita **Google Drive API**.
+2. **Credenziali → Crea credenziali → ID client OAuth** → tipo *App desktop*.
+   Copia **Client ID** e **Client secret**. In *Schermata consenso OAuth* aggiungi
+   il tuo indirizzo Gmail tra gli **utenti di test**.
+3. Genera il **refresh token** con l'OAuth Playground:
+   a. Apri <https://developers.google.com/oauthplayground> → ingranaggio in alto a
+      destra → spunta *Use your own OAuth credentials* → incolla Client ID/secret.
+   b. Nella lista scegli *Drive API v3* → `https://www.googleapis.com/auth/drive.file`
+      → **Authorize APIs** → accedi col tuo Gmail.
+   c. **Exchange authorization code for tokens** → copia il **Refresh token**.
+4. In Google Drive crea una cartella (es. "ReChurch Backup") e copia l'**ID** dall'URL
+   (`https://drive.google.com/drive/folders/<QUESTO_ID>`).
+5. Imposta le variabili:
+   - `CLOUD_BACKUP_PROVIDER=gdrive`
+   - `GDRIVE_CLIENT_ID=...`
+   - `GDRIVE_CLIENT_SECRET=...`
+   - `GDRIVE_REFRESH_TOKEN=...`
+   - `GDRIVE_FOLDER_ID=<id cartella>`
+
+   > Per Google **Workspace** puoi invece usare un service account:
+   > `GDRIVE_SERVICE_ACCOUNT_INFO=<JSON>` (o `GDRIVE_SERVICE_ACCOUNT_JSON=/percorso`)
+   > + `GDRIVE_FOLDER_ID` di una cartella condivisa col service account.
 
 Le librerie cloud sono già incluse nell'immagine Docker (`requirements-cloud.txt`).
 Per usarle in locale: `pip install -r backend/requirements-cloud.txt`.
