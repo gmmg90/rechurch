@@ -10,7 +10,9 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 import io
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "contabilita")
+from app.paths import get_uploads_dir
+
+UPLOAD_DIR = str(get_uploads_dir() / "contabilita")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_MIME = {

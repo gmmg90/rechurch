@@ -9,27 +9,32 @@ from fastapi.responses import FileResponse
 
 from app import models
 from app.auth import require_roles
+from app.paths import get_data_dir, get_db_path
 
 router = APIRouter(prefix="/backup", tags=["backup"])
 
-# Resolve the project root (two levels above this file: routers -> app -> backend)
+# Backups live inside the persistent data dir (backend/ in dev, C:\ReChurch\ when packaged)
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
-BACKUP_DIR = _BACKEND_DIR / "backups"
+BACKUP_DIR = get_data_dir() / "backups"
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _get_db_path() -> Path:
-    """Return the SQLite DB file path from DATABASE_URL env var or default."""
-    db_url = os.getenv("DATABASE_URL", "sqlite:///./rechurch.db")
-    if db_url.startswith("sqlite:///"):
-        raw = db_url[len("sqlite:///"):]
-        # Absolute path already
-        if os.path.isabs(raw):
-            return Path(raw)
-        # Relative path — resolve relative to backend dir
-        return (_BACKEND_DIR / raw).resolve()
-    # Non-SQLite: nothing to backup
-    raise HTTPException(status_code=400, detail="Backup supportato solo per database SQLite")
+    """Return the SQLite DB file path.
+
+    Honors DATABASE_URL when it points to a SQLite file; otherwise falls back
+    to the resolved data-dir path (desktop / packaged app).
+    """
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        if db_url.startswith("sqlite:///"):
+            raw = db_url[len("sqlite:///"):]
+            if os.path.isabs(raw):
+                return Path(raw)
+            return (_BACKEND_DIR / raw).resolve()
+        # Non-SQLite: nothing to backup
+        raise HTTPException(status_code=400, detail="Backup supportato solo per database SQLite")
+    return get_db_path()
 
 
 @router.post("/esegui")

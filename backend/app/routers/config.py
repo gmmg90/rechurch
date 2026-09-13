@@ -8,12 +8,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user, require_roles
+from app.paths import get_uploads_dir
 
 router = APIRouter(prefix="/config", tags=["config"])
 
-UPLOAD_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads"
-)
+UPLOAD_DIR = str(get_uploads_dir())
 
 
 def _get_or_create(db: Session) -> models.ParrocchiaConfig:

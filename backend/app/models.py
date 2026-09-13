@@ -80,18 +80,44 @@ class Cresima(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class Comunione(Base):
+    __tablename__ = "comunioni"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False)
+    cognome = Column(String(100), nullable=False)
+    data_nascita = Column(Date, nullable=True)
+    luogo_nascita = Column(String(200), nullable=True)
+    data_comunione = Column(Date, nullable=False)
+    luogo_comunione = Column(String(200), nullable=True)
+    padre_nome = Column(String(200), nullable=True)
+    madre_nome = Column(String(200), nullable=True)
+    ministro = Column(String(200), nullable=True)
+    numero_registro = Column(String(50), nullable=True)
+    anno_registro = Column(Integer, nullable=True)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class Matrimonio(Base):
     __tablename__ = "matrimoni"
 
     id = Column(Integer, primary_key=True, index=True)
     sposo_nome = Column(String(100), nullable=False)
     sposo_cognome = Column(String(100), nullable=False)
+    sposo_luogo_nascita = Column(String(200), nullable=True)
+    sposo_data_nascita = Column(Date, nullable=True)
     sposa_nome = Column(String(100), nullable=False)
     sposa_cognome = Column(String(100), nullable=False)
+    sposa_luogo_nascita = Column(String(200), nullable=True)
+    sposa_data_nascita = Column(Date, nullable=True)
     data_matrimonio = Column(Date, nullable=False)
     luogo_matrimonio = Column(String(200), nullable=False)
     testimone1_nome = Column(String(200), nullable=True)
     testimone2_nome = Column(String(200), nullable=True)
+    testimone3_nome = Column(String(200), nullable=True)
+    testimone4_nome = Column(String(200), nullable=True)
     ministro = Column(String(200), nullable=False)
     numero_registro = Column(String(50), nullable=True)
     anno_registro = Column(Integer, nullable=True)
@@ -219,3 +245,18 @@ class ModuloConfig(Base):
     icona = Column(String(50), nullable=True)
     attivo = Column(Boolean, default=True, nullable=False)
     ordine = Column(Integer, default=0, nullable=False)
+
+
+class ReportTemplate(Base):
+    """Testo dei certificati. Una riga per tipo di sacramento.
+    Ogni sezione è una stringa con segnaposti tipo {nome}, {cognome}, {data_battesimo}, etc.
+    """
+    __tablename__ = "report_templates"
+
+    tipo = Column(String(20), primary_key=True)  # battesimi|comunioni|cresime|matrimoni
+    titolo = Column(Text, nullable=True)
+    intro = Column(Text, nullable=True)
+    body = Column(Text, nullable=True)          # corpo, può contenere \n\n per separare paragrafi
+    chiusura = Column(Text, nullable=True)
+    firma_label = Column(String(100), nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
