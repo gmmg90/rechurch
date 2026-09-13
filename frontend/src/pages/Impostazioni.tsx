@@ -157,7 +157,7 @@ export default function Impostazioni() {
           <Field label="Nome parrocchia *" value={form.nome} onChange={set('nome')} placeholder="Parrocchia San Giovanni" />
           <Field label="Diocesi" value={form.diocesi ?? ''} onChange={set('diocesi')} placeholder="es. Diocesi di Roma" />
           <Field label="Indirizzo" value={form.indirizzo ?? ''} onChange={set('indirizzo')} placeholder="Via Roma 1" />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="CAP" value={form.cap ?? ''} onChange={set('cap')} placeholder="00100" />
             <div className="col-span-2">
               <Field label="Città" value={form.citta ?? ''} onChange={set('citta')} placeholder="Roma" />

@@ -159,7 +159,7 @@ export default function PersonaForm() {
         </div>
 
         {/* Sesso e nascita */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="Sesso">
             <select {...register('sesso')} className={inputCls}>
               <option value="">—</option>
@@ -183,7 +183,7 @@ export default function PersonaForm() {
             <input {...register('indirizzo')} className={inputCls} />
           </Field>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="CAP">
             <input {...register('cap')} className={inputCls} />
           </Field>

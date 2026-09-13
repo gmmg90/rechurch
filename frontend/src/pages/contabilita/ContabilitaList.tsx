@@ -224,7 +224,7 @@ export default function ContabilitaList() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
             <TrendingUp className="text-green-600" size={22} />

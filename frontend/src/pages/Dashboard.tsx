@@ -33,6 +33,20 @@ function useDebounce<T>(value: T, delay: number): T {
   return d
 }
 
+// ── Mobile detection (< md) ────────────────────────────────────────────────────
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return isMobile
+}
+
 // ── Active donut shape ────────────────────────────────────────────────────────
 const ActiveShape = (props: any) => {
   const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props
@@ -218,6 +232,7 @@ export default function Dashboard() {
   const [al, setAl] = useState('')
   const [activeDonut, setActiveDonut] = useState(0)
   const [layouts, setLayouts] = useState<Layouts>(loadLayouts)
+  const isMobile = useIsMobile()
 
   const hasDateFilter = !!(dal || al)
 
@@ -413,6 +428,31 @@ export default function Dashboard() {
       </div>
     </div>
   )
+
+  // ── Mobile: widget impilati (niente drag & drop) ───────────────────────────
+  if (isMobile) {
+    return (
+      <div className="p-4 min-h-screen bg-gray-50">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+          <p className="text-gray-500 text-sm mt-0.5">Panoramica parrocchiale</p>
+        </div>
+        <div className="mb-4"><GlobalSearch /></div>
+
+        <div className="space-y-4">
+          <Widget>{statsContent}</Widget>
+          <Widget>
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block">Andamento</span>
+            <div className="h-96">{chartContent}</div>
+          </Widget>
+          <Widget>{donutContent}</Widget>
+          <Widget><ProssimiEventiWidget /></Widget>
+          <Widget><ContabilitaMeseWidget /></Widget>
+          <Widget>{azioniContent}</Widget>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 min-h-screen bg-gray-50">
