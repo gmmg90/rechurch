@@ -101,7 +101,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-indigo-400 text-xs mt-6">
-          ReChurch v1.0 &mdash; Sistema di gestione parrocchiale
+          ReChurch v2.1 &mdash; Sistema di gestione parrocchiale
         </p>
       </div>
     </div>
