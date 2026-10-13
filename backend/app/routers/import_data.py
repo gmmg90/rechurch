@@ -19,11 +19,15 @@ router = APIRouter(prefix="/import", tags=["import"])
 # In-memory store for uploaded MDB files pending confirmation
 _mdb_sessions: Dict[str, str] = {}
 
+# mdb-export di default scrive le date come "01/05/95 00:00:00" (mese/giorno/anno a
+# 2 cifre), ambiguo e non interpretabile: forziamo il formato ISO.
+_MDB_EXPORT = ["mdb-export", "-D", "%Y-%m-%d", "-T", "%Y-%m-%d %H:%M:%S"]
+
 
 def _parse_date(value: str) -> Optional[date]:
     if not value or value.strip() == "":
         return None
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+    for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
         try:
             from datetime import datetime
             return datetime.strptime(value.strip(), fmt).date()
@@ -297,7 +301,7 @@ async def upload_mdb(
     for table in tables:
         try:
             exp = subprocess.run(
-                ["mdb-export", tmp_path, table],
+                [*_MDB_EXPORT, tmp_path, table],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -371,7 +375,7 @@ async def confirm_mdb_import(
 
         try:
             exp = subprocess.run(
-                ["mdb-export", tmp_path, table],
+                [*_MDB_EXPORT, tmp_path, table],
                 capture_output=True,
                 text=True,
                 timeout=60,
