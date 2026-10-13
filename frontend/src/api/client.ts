@@ -234,6 +234,36 @@ export interface SistemaStats {
   totale_persone: number
   totale_movimenti: number
   ultimo_backup?: string
+  db_tipo?: string
+  db_host?: string
+}
+
+export interface ApplicaLuogoResult {
+  valore: string
+  battesimi: number
+  comunioni: number
+  cresime: number
+  matrimoni: number
+}
+
+export type TipoVerifica = 'battesimi' | 'comunioni' | 'cresime' | 'matrimoni' | 'archivio'
+
+export interface ProblemaVerifica {
+  chiave: string
+  tipo: TipoVerifica
+  record_id: number | null
+  persona: string
+  categoria: string
+  messaggio: string
+  origine: 'controllo' | 'import' | 'manuale'
+}
+
+export const verificheApi = {
+  lista: () =>
+    api.get<{ totale: number; problemi: ProblemaVerifica[] }>('/verifiche/').then(r => r.data),
+  conteggio: () => api.get<{ totale: number }>('/verifiche/conteggio').then(r => r.data),
+  // "È corretto così" per un controllo, oppure segna risolta una segnalazione
+  ignora: (chiave: string) => api.post('/verifiche/ignora', { chiave }).then(r => r.data),
 }
 
 export interface Compleanno {
@@ -271,6 +301,8 @@ export const configApi = {
   updateModulo: (codice: string, attivo: boolean) =>
     api.put<ModuloConfig>(`/config/moduli/${codice}`, { attivo }).then(r => r.data),
   getSistema: () => api.get<SistemaStats>('/config/sistema/').then(r => r.data),
+  applicaLuogo: (valore?: string, sovrascrivi = true) =>
+    api.post<ApplicaLuogoResult>('/config/applica-luogo', { valore, sovrascrivi }).then(r => r.data),
 }
 
 export const pdfApi = {

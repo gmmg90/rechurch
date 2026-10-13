@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
 import { battesimiApi, type Battesimo } from '../../api/client'
@@ -22,6 +22,8 @@ const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm foc
 export default function BattesimoForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Se arrivo dalla pagina "Da verificare" ci torno dopo il salvataggio
+  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/battesimi'
   const qc = useQueryClient()
   const isEdit = Boolean(id)
 
@@ -39,11 +41,11 @@ export default function BattesimoForm() {
 
   const create = useMutation({
     mutationFn: battesimiApi.create,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['battesimi'] }); navigate('/battesimi') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['battesimi'] }); navigate(backTo) },
   })
   const update = useMutation({
     mutationFn: (data: FormData) => battesimiApi.update(Number(id), data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['battesimi'] }); navigate('/battesimi') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['battesimi'] }); navigate(backTo) },
   })
 
   const onSubmit = (data: FormData) => {
@@ -55,7 +57,7 @@ export default function BattesimoForm() {
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
-      <button onClick={() => navigate('/battesimi')} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
+      <button onClick={() => navigate(backTo)} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
         <ChevronLeft size={16} /> Battesimi
       </button>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">{isEdit ? 'Modifica Battesimo' : 'Nuovo Battesimo'}</h1>
@@ -84,8 +86,8 @@ export default function BattesimoForm() {
           <Field label="Luogo battesimo *" error={errors.luogo_battesimo?.message}>
             <input {...register('luogo_battesimo', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
-          <Field label="Ministro *" error={errors.ministro?.message}>
-            <input {...register('ministro', { required: 'Campo obbligatorio' })} className={inputCls} />
+          <Field label="Ministro">
+            <input {...register('ministro')} className={inputCls} />
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="N. Registro">
@@ -118,7 +120,7 @@ export default function BattesimoForm() {
         </Field>
 
         <div className="flex gap-3 justify-end pt-2">
-          <button type="button" onClick={() => navigate('/battesimi')} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+          <button type="button" onClick={() => navigate(backTo)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
             Annulla
           </button>
           <button type="submit" disabled={isPending} className="px-6 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium">

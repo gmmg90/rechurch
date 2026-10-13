@@ -24,6 +24,7 @@ from app.routers import rubrica as rubrica_router
 from app.routers import contabilita as contabilita_router
 from app.routers import scadenziario as scadenziario_router
 from app.routers import report_templates as report_templates_router
+from app.routers import verifiche as verifiche_router
 
 app = FastAPI(
     title="ReChurch API",
@@ -61,6 +62,7 @@ _ROUTERS = [
     contabilita_router.router,
     scadenziario_router.router,
     report_templates_router.router,
+    verifiche_router.router,
 ]
 
 API = "/api"
@@ -129,6 +131,7 @@ _MODULI_DEFAULT = [
     {"codice": "scanner",     "nome": "Scanner Documenti", "descrizione": "Scansione di ricevute e documenti da allegare ai movimenti", "icona": "ScanLine",     "ordine": 8},
     {"codice": "certificati", "nome": "Modelli Certificati","descrizione": "Personalizza il testo dei certificati stampabili",          "icona": "FileText",     "ordine": 9},
     {"codice": "importa",     "nome": "Importa Dati",      "descrizione": "Importa dati da file CSV o MDB (Access)",                    "icona": "Upload",       "ordine": 10},
+    {"codice": "verifiche",   "nome": "Da verificare",     "descrizione": "Record con date incoerenti o dati da controllare",          "icona": "ClipboardCheck", "ordine": 11},
 ]
 
 

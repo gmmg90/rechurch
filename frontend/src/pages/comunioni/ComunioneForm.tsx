@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
 import { comunioniApi, type Comunione } from '../../api/client'
@@ -22,6 +22,8 @@ const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm foc
 export default function ComunioneForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Se arrivo dalla pagina "Da verificare" ci torno dopo il salvataggio
+  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/comunioni'
   const qc = useQueryClient()
   const isEdit = Boolean(id)
 
@@ -39,11 +41,11 @@ export default function ComunioneForm() {
 
   const create = useMutation({
     mutationFn: comunioniApi.create,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['comunioni'] }); navigate('/comunioni') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['comunioni'] }); navigate(backTo) },
   })
   const update = useMutation({
     mutationFn: (data: FormData) => comunioniApi.update(Number(id), data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['comunioni'] }); navigate('/comunioni') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['comunioni'] }); navigate(backTo) },
   })
 
   const onSubmit = (data: FormData) => {
@@ -55,7 +57,7 @@ export default function ComunioneForm() {
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
-      <button onClick={() => navigate('/comunioni')} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
+      <button onClick={() => navigate(backTo)} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
         <ChevronLeft size={16} /> Comunioni
       </button>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">{isEdit ? 'Modifica Comunione' : 'Nuova Comunione'}</h1>
@@ -112,7 +114,7 @@ export default function ComunioneForm() {
         </Field>
 
         <div className="flex gap-3 justify-end pt-2">
-          <button type="button" onClick={() => navigate('/comunioni')} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+          <button type="button" onClick={() => navigate(backTo)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
             Annulla
           </button>
           <button type="submit" disabled={isPending} className="px-6 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium">

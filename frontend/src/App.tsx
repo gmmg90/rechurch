@@ -15,6 +15,7 @@ import ComunioniList from './pages/comunioni/ComunioniList'
 import ComunioneForm from './pages/comunioni/ComunioneForm'
 import ModelliCertificati from './pages/ModelliCertificati'
 import CertificatoView from './pages/CertificatoView'
+import Verifiche from './pages/Verifiche'
 import ImportaDati from './pages/ImportaDati'
 import Impostazioni from './pages/Impostazioni'
 import Utenti from './pages/Utenti'
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="comunioni/nuovo" element={<ComunioneForm />} />
           <Route path="comunioni/:id/modifica" element={<ComunioneForm />} />
           <Route path="certificati" element={<ModelliCertificati />} />
+          <Route path="verifiche" element={<Verifiche />} />
           <Route path="battesimi/:id/certificato" element={<CertificatoView tipo="battesimi" />} />
           <Route path="comunioni/:id/certificato" element={<CertificatoView tipo="comunioni" />} />
           <Route path="cresime/:id/certificato" element={<CertificatoView tipo="cresime" />} />

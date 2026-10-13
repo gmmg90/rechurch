@@ -260,3 +260,26 @@ class ReportTemplate(Base):
     chiusura = Column(Text, nullable=True)
     firma_label = Column(String(100), nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Segnalazione(Base):
+    """Record da controllare segnalato a mano o dall'import dell'archivio
+    (informazioni che i controlli automatici non possono ricavare dai dati)."""
+    __tablename__ = "segnalazioni"
+    id = Column(Integer, primary_key=True, index=True)
+    tipo = Column(String(20), nullable=False)        # battesimi|comunioni|cresime|matrimoni|archivio
+    record_id = Column(Integer, nullable=True)       # None se il record non esiste nell'app
+    persona = Column(String(300), nullable=True)
+    categoria = Column(String(50), nullable=False)
+    messaggio = Column(Text, nullable=False)
+    origine = Column(String(20), nullable=False, default="manuale")  # import | manuale
+    risolta = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class VerificaIgnorata(Base):
+    """Controllo automatico confermato come corretto dall'utente ("è corretto così")."""
+    __tablename__ = "verifiche_ignorate"
+    id = Column(Integer, primary_key=True, index=True)
+    chiave = Column(String(120), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

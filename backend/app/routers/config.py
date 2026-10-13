@@ -142,4 +142,36 @@ def sistema_stats(
         totale_persone=db.query(models.Persona).count(),
         totale_movimenti=db.query(models.MovimentoContabile).count(),
         ultimo_backup=ultimo_backup,
+        # Solo tipo e host del database (utile per sapere in che regione sono i dati)
+        db_tipo=db.bind.url.get_backend_name() if db.bind is not None else None,
+        db_host=db.bind.url.host if db.bind is not None else None,
     )
+
+
+# ─── Luogo dei sacramenti ─────────────────────────────────────────────────────
+
+@router.post("/applica-luogo", response_model=schemas.ApplicaLuogoResponse)
+def applica_luogo(
+    data: schemas.ApplicaLuogoRequest,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(require_roles("admin")),
+):
+    """Imposta il luogo di celebrazione per tutti i sacramenti (o solo per quelli
+    senza luogo), di default con il nome della parrocchia configurato."""
+    valore = (data.valore or _get_or_create(db).nome or "").strip()
+    if not valore:
+        raise HTTPException(400, "Indica il luogo o configura prima il nome della parrocchia")
+
+    risultato = {"valore": valore}
+    for chiave, Model, campo in (
+        ("battesimi", models.Battesimo, models.Battesimo.luogo_battesimo),
+        ("comunioni", models.Comunione, models.Comunione.luogo_comunione),
+        ("cresime", models.Cresima, models.Cresima.luogo_cresima),
+        ("matrimoni", models.Matrimonio, models.Matrimonio.luogo_matrimonio),
+    ):
+        q = db.query(Model)
+        if not data.sovrascrivi:
+            q = q.filter((campo.is_(None)) | (campo == ""))
+        risultato[chiave] = q.update({campo: valore}, synchronize_session=False)
+    db.commit()
+    return risultato

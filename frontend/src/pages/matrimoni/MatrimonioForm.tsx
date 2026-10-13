@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
 import { matrimoniApi, type Matrimonio } from '../../api/client'
@@ -22,6 +22,8 @@ const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm foc
 export default function MatrimonioForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Se arrivo dalla pagina "Da verificare" ci torno dopo il salvataggio
+  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/matrimoni'
   const qc = useQueryClient()
   const isEdit = Boolean(id)
 
@@ -39,11 +41,11 @@ export default function MatrimonioForm() {
 
   const create = useMutation({
     mutationFn: matrimoniApi.create,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['matrimoni'] }); navigate('/matrimoni') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['matrimoni'] }); navigate(backTo) },
   })
   const update = useMutation({
     mutationFn: (data: FormData) => matrimoniApi.update(Number(id), data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['matrimoni'] }); navigate('/matrimoni') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['matrimoni'] }); navigate(backTo) },
   })
 
   const onSubmit = (data: FormData) => {
@@ -55,7 +57,7 @@ export default function MatrimonioForm() {
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
-      <button onClick={() => navigate('/matrimoni')} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
+      <button onClick={() => navigate(backTo)} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
         <ChevronLeft size={16} /> Matrimoni
       </button>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">{isEdit ? 'Modifica Matrimonio' : 'Nuovo Matrimonio'}</h1>
@@ -70,6 +72,12 @@ export default function MatrimonioForm() {
             <Field label="Cognome *" error={errors.sposo_cognome?.message}>
               <input {...register('sposo_cognome', { required: 'Campo obbligatorio' })} className={inputCls} />
             </Field>
+            <Field label="Data di nascita">
+              <input type="date" {...register('sposo_data_nascita')} className={inputCls} />
+            </Field>
+            <Field label="Luogo di nascita">
+              <input {...register('sposo_luogo_nascita')} className={inputCls} />
+            </Field>
           </div>
         </div>
 
@@ -83,6 +91,12 @@ export default function MatrimonioForm() {
             <Field label="Cognome *" error={errors.sposa_cognome?.message}>
               <input {...register('sposa_cognome', { required: 'Campo obbligatorio' })} className={inputCls} />
             </Field>
+            <Field label="Data di nascita">
+              <input type="date" {...register('sposa_data_nascita')} className={inputCls} />
+            </Field>
+            <Field label="Luogo di nascita">
+              <input {...register('sposa_luogo_nascita')} className={inputCls} />
+            </Field>
           </div>
         </div>
 
@@ -94,8 +108,8 @@ export default function MatrimonioForm() {
           <Field label="Luogo *" error={errors.luogo_matrimonio?.message}>
             <input {...register('luogo_matrimonio', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
-          <Field label="Ministro *" error={errors.ministro?.message}>
-            <input {...register('ministro', { required: 'Campo obbligatorio' })} className={inputCls} />
+          <Field label="Ministro">
+            <input {...register('ministro')} className={inputCls} />
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="N. Registro">
@@ -115,6 +129,12 @@ export default function MatrimonioForm() {
           <Field label="Testimone 2">
             <input {...register('testimone2_nome')} className={inputCls} />
           </Field>
+          <Field label="Testimone 3">
+            <input {...register('testimone3_nome')} className={inputCls} />
+          </Field>
+          <Field label="Testimone 4">
+            <input {...register('testimone4_nome')} className={inputCls} />
+          </Field>
         </div>
 
         <Field label="Note">
@@ -122,7 +142,7 @@ export default function MatrimonioForm() {
         </Field>
 
         <div className="flex gap-3 justify-end pt-2">
-          <button type="button" onClick={() => navigate('/matrimoni')} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+          <button type="button" onClick={() => navigate(backTo)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
             Annulla
           </button>
           <button type="submit" disabled={isPending} className="px-6 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium">

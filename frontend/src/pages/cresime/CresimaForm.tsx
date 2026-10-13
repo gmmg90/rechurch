@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
 import { cresimeApi, type Cresima } from '../../api/client'
@@ -22,6 +22,8 @@ const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm foc
 export default function CresimaForm() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Se arrivo dalla pagina "Da verificare" ci torno dopo il salvataggio
+  const backTo = (useLocation().state as { from?: string } | null)?.from ?? '/cresime'
   const qc = useQueryClient()
   const isEdit = Boolean(id)
 
@@ -39,11 +41,11 @@ export default function CresimaForm() {
 
   const create = useMutation({
     mutationFn: cresimeApi.create,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cresime'] }); navigate('/cresime') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cresime'] }); navigate(backTo) },
   })
   const update = useMutation({
     mutationFn: (data: FormData) => cresimeApi.update(Number(id), data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cresime'] }); navigate('/cresime') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['cresime'] }); navigate(backTo) },
   })
 
   const onSubmit = (data: FormData) => {
@@ -55,7 +57,7 @@ export default function CresimaForm() {
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
-      <button onClick={() => navigate('/cresime')} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
+      <button onClick={() => navigate(backTo)} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
         <ChevronLeft size={16} /> Cresime
       </button>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">{isEdit ? 'Modifica Cresima' : 'Nuova Cresima'}</h1>
@@ -84,8 +86,8 @@ export default function CresimaForm() {
           <Field label="Luogo cresima *" error={errors.luogo_cresima?.message}>
             <input {...register('luogo_cresima', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
-          <Field label="Ministro *" error={errors.ministro?.message}>
-            <input {...register('ministro', { required: 'Campo obbligatorio' })} className={inputCls} />
+          <Field label="Ministro">
+            <input {...register('ministro')} className={inputCls} />
           </Field>
           <Field label="Vescovo">
             <input {...register('vescovo')} className={inputCls} />
@@ -121,7 +123,7 @@ export default function CresimaForm() {
         </Field>
 
         <div className="flex gap-3 justify-end pt-2">
-          <button type="button" onClick={() => navigate('/cresime')} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+          <button type="button" onClick={() => navigate(backTo)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
             Annulla
           </button>
           <button type="submit" disabled={isPending} className="px-6 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium">

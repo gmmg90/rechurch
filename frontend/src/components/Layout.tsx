@@ -17,11 +17,14 @@ import {
   ShieldCheck,
   Wheat,
   FileText,
+  ClipboardCheck,
   Menu,
   X,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import { useModuli } from '../contexts/ModuliContext'
+import { verificheApi } from '../api/client'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Amministratore',
@@ -43,6 +46,7 @@ const ALL_NAV_ITEMS = [
   // Attività "da scrivania": nascoste su mobile per uno smartphone più snello
   { to: '/certificati', label: 'Modelli Certif.',   icon: FileText,    end: false, modulo: 'certificati',  desktopOnly: true },
   { to: '/importa',     label: 'Importa Dati',      icon: Upload,      end: false, modulo: 'importa',      desktopOnly: true },
+  { to: '/verifiche',   label: 'Da verificare',     icon: ClipboardCheck, end: false, modulo: 'verifiche', desktopOnly: true },
   { to: '/impostazioni',label: 'Impostazioni',      icon: Settings,    end: false, modulo: null,           desktopOnly: true },
 ]
 
@@ -65,6 +69,12 @@ export default function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
   const isMobile = useIsMobile()
+  const { data: verifiche } = useQuery({
+    queryKey: ['verifiche-conteggio'],
+    queryFn: verificheApi.conteggio,
+    enabled: !isMobile && moduli['verifiche'] !== false,
+    staleTime: 5 * 60_000,
+  })
 
   // Close the mobile drawer on route change
   useEffect(() => { setDrawerOpen(false) }, [location.pathname])
@@ -140,6 +150,11 @@ export default function Layout() {
             >
               <Icon size={18} />
               {label}
+              {to === '/verifiche' && (verifiche?.totale ?? 0) > 0 && (
+                <span className="ml-auto text-xs bg-amber-400 text-amber-950 font-semibold rounded-full px-2 py-0.5">
+                  {verifiche!.totale}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

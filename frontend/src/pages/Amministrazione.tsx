@@ -16,6 +16,19 @@ const ICONE: Record<string, React.ElementType> = {
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: 'long' })
 
+// Regione del database dedotta dall'host (Neon, Render Postgres, Supabase)
+function regioneDb(host?: string) {
+  const h = (host ?? '').toLowerCase()
+  if (h.includes('eu-central-1') || h.includes('frankfurt')) return 'Francoforte (UE)'
+  if (h.includes('eu-west-1')) return 'Irlanda (UE)'
+  if (h.includes('eu-west-2')) return 'Londra'
+  if (h.includes('us-west-2') || h.includes('oregon')) return 'Oregon (USA)'
+  if (h.includes('us-east-1') || h.includes('virginia')) return 'Virginia (USA)'
+  if (h.includes('us-east-2') || h.includes('ohio')) return 'Ohio (USA)'
+  if (h.includes('singapore') || h.includes('ap-southeast')) return 'Asia'
+  return 'regione non riconosciuta'
+}
+
 function ToggleSwitch({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
@@ -199,7 +212,12 @@ export default function Amministrazione() {
               </div>
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-gray-500 flex items-center gap-2"><HardDrive size={14} /> Database</span>
-                <span className="font-semibold text-gray-800">{sistema ? `${sistema.db_size_mb} MB` : '—'}</span>
+                <span className="font-semibold text-gray-800 text-right">
+                  {!sistema ? '—' : sistema.db_tipo === 'postgresql'
+                    ? <>PostgreSQL · {regioneDb(sistema.db_host)}
+                        {sistema.db_host && <span className="block text-xs font-normal text-gray-400">{sistema.db_host}</span>}</>
+                    : `SQLite · ${sistema.db_size_mb} MB`}
+                </span>
               </div>
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-gray-500 flex items-center gap-2"><Clock size={14} /> Ultimo backup</span>

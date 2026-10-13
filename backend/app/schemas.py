@@ -1,6 +1,15 @@
 from datetime import date, datetime
-from typing import Optional
-from pydantic import BaseModel
+from typing import Annotated, Optional
+from pydantic import BaseModel, BeforeValidator
+
+
+def _empty_to_none(v):
+    """I form HTML inviano "" per una data lasciata vuota: trattala come assente."""
+    return None if isinstance(v, str) and not v.strip() else v
+
+
+# Data facoltativa che accetta anche la stringa vuota
+OptDate = Annotated[Optional[date], BeforeValidator(_empty_to_none)]
 
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -81,7 +90,7 @@ class ParrocchiaConfigResponse(BaseModel):
 class BattesimoBase(BaseModel):
     nome: str
     cognome: str
-    data_nascita: Optional[date] = None
+    data_nascita: OptDate = None
     luogo_nascita: Optional[str] = None
     data_battesimo: date
     luogo_battesimo: str
@@ -102,9 +111,9 @@ class BattesimoCreate(BattesimoBase):
 class BattesimoUpdate(BaseModel):
     nome: Optional[str] = None
     cognome: Optional[str] = None
-    data_nascita: Optional[date] = None
+    data_nascita: OptDate = None
     luogo_nascita: Optional[str] = None
-    data_battesimo: Optional[date] = None
+    data_battesimo: OptDate = None
     luogo_battesimo: Optional[str] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
@@ -129,7 +138,7 @@ class BattesimoResponse(BattesimoBase):
 class CresimaBase(BaseModel):
     nome: str
     cognome: str
-    data_nascita: Optional[date] = None
+    data_nascita: OptDate = None
     luogo_nascita: Optional[str] = None
     data_cresima: date
     luogo_cresima: str
@@ -151,9 +160,9 @@ class CresimaCreate(CresimaBase):
 class CresimaUpdate(BaseModel):
     nome: Optional[str] = None
     cognome: Optional[str] = None
-    data_nascita: Optional[date] = None
+    data_nascita: OptDate = None
     luogo_nascita: Optional[str] = None
-    data_cresima: Optional[date] = None
+    data_cresima: OptDate = None
     luogo_cresima: Optional[str] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
@@ -179,7 +188,7 @@ class CresimaResponse(CresimaBase):
 class ComunioneBase(BaseModel):
     nome: str
     cognome: str
-    data_nascita: Optional[date] = None
+    data_nascita: OptDate = None
     luogo_nascita: Optional[str] = None
     data_comunione: date
     luogo_comunione: Optional[str] = None
@@ -198,9 +207,9 @@ class ComunioneCreate(ComunioneBase):
 class ComunioneUpdate(BaseModel):
     nome: Optional[str] = None
     cognome: Optional[str] = None
-    data_nascita: Optional[date] = None
+    data_nascita: OptDate = None
     luogo_nascita: Optional[str] = None
-    data_comunione: Optional[date] = None
+    data_comunione: OptDate = None
     luogo_comunione: Optional[str] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
@@ -224,11 +233,11 @@ class MatrimonioBase(BaseModel):
     sposo_nome: str
     sposo_cognome: str
     sposo_luogo_nascita: Optional[str] = None
-    sposo_data_nascita: Optional[date] = None
+    sposo_data_nascita: OptDate = None
     sposa_nome: str
     sposa_cognome: str
     sposa_luogo_nascita: Optional[str] = None
-    sposa_data_nascita: Optional[date] = None
+    sposa_data_nascita: OptDate = None
     data_matrimonio: date
     luogo_matrimonio: str
     testimone1_nome: Optional[str] = None
@@ -249,12 +258,12 @@ class MatrimonioUpdate(BaseModel):
     sposo_nome: Optional[str] = None
     sposo_cognome: Optional[str] = None
     sposo_luogo_nascita: Optional[str] = None
-    sposo_data_nascita: Optional[date] = None
+    sposo_data_nascita: OptDate = None
     sposa_nome: Optional[str] = None
     sposa_cognome: Optional[str] = None
     sposa_luogo_nascita: Optional[str] = None
-    sposa_data_nascita: Optional[date] = None
-    data_matrimonio: Optional[date] = None
+    sposa_data_nascita: OptDate = None
+    data_matrimonio: OptDate = None
     luogo_matrimonio: Optional[str] = None
     testimone1_nome: Optional[str] = None
     testimone2_nome: Optional[str] = None
@@ -307,7 +316,7 @@ class PersonaBase(BaseModel):
     nome: str
     cognome: str
     sesso: Optional[str] = None
-    data_nascita: Optional[date] = None
+    data_nascita: OptDate = None
     luogo_nascita: Optional[str] = None
     indirizzo: Optional[str] = None
     cap: Optional[str] = None
@@ -324,7 +333,7 @@ class PersonaUpdate(BaseModel):
     nome: Optional[str] = None
     cognome: Optional[str] = None
     sesso: Optional[str] = None
-    data_nascita: Optional[date] = None
+    data_nascita: OptDate = None
     luogo_nascita: Optional[str] = None
     indirizzo: Optional[str] = None
     cap: Optional[str] = None
@@ -418,7 +427,7 @@ class MovimentoContabileCreate(MovimentoContabileBase):
     pass
 
 class MovimentoContabileUpdate(BaseModel):
-    data: Optional[date] = None
+    data: OptDate = None
     tipo: Optional[str] = None
     importo: Optional[Decimal] = None
     descrizione: Optional[str] = None
@@ -473,7 +482,7 @@ class EventoBase(BaseModel):
     luogo: Optional[str] = None
     categoria_id: Optional[int] = None
     ricorrenza: Optional[str] = None
-    ricorrenza_fine: Optional[date] = None
+    ricorrenza_fine: OptDate = None
     note: Optional[str] = None
 
 class EventoCreate(EventoBase):
@@ -488,7 +497,7 @@ class EventoUpdate(BaseModel):
     luogo: Optional[str] = None
     categoria_id: Optional[int] = None
     ricorrenza: Optional[str] = None
-    ricorrenza_fine: Optional[date] = None
+    ricorrenza_fine: OptDate = None
     note: Optional[str] = None
 
 class EventoResponse(EventoBase):
@@ -531,6 +540,21 @@ class SistemaStats(BaseModel):
     totale_persone: int
     totale_movimenti: int
     ultimo_backup: Optional[str] = None
+    db_tipo: Optional[str] = None      # sqlite | postgresql
+    db_host: Optional[str] = None      # host del database (mai credenziali)
+
+
+class ApplicaLuogoRequest(BaseModel):
+    valore: Optional[str] = None       # default: nome della parrocchia in Impostazioni
+    sovrascrivi: bool = True           # False = compila solo i luoghi vuoti
+
+
+class ApplicaLuogoResponse(BaseModel):
+    valore: str
+    battesimi: int
+    comunioni: int
+    cresime: int
+    matrimoni: int
 
 
 # ─── ReportTemplate (testo certificati) ───────────────────────────────────────

@@ -10,6 +10,9 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
+    # Dati di cittadini UE: server in Europa (GDPR). Usa per Neon la stessa regione:
+    # "AWS Europe Central 1 (Frankfurt)".
+    region: frankfurt
     healthCheckPath: /health
     envVars:
       # Postgres persistente e gratuito (Neon/Supabase). Esempio:
