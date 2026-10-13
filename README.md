@@ -29,7 +29,11 @@ PC della parrocchia) sia come **web app accessibile da fuori**, dallo stesso cod
 
 ## Avvio in sviluppo
 
-Backend:
+**Windows, a un clic:** doppio clic su `avvia-windows.bat` nella cartella del progetto.
+Installa le dipendenze, avvia backend e frontend in due finestre e apre il browser
+su <http://localhost:5173>. Per fermare l'app chiudi le due finestre.
+
+Oppure manualmente — backend:
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
