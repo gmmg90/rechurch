@@ -56,6 +56,21 @@ a = Analysis(
         "sqlalchemy.dialects.sqlite",
         # email-validator non serve ma pydantic lo importa lazy
         "email_validator",
+        # Auth (JWT + hashing)
+        "passlib.handlers.bcrypt",
+        "bcrypt",
+        "jose",
+        "jose.backends",
+        "jose.backends.cryptography_backend",
+        # Scheduler (backup automatico)
+        "apscheduler.schedulers.background",
+        "apscheduler.triggers.cron",
+        "apscheduler.jobstores.memory",
+        "apscheduler.executors.pool",
+        # Excel export (contabilità)
+        "openpyxl",
+        # Upload multipart
+        "multipart",
     ],
     hookspath=[],
     hooksconfig={},

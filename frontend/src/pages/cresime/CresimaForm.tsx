@@ -54,14 +54,14 @@ export default function CresimaForm() {
   const isPending = create.isPending || update.isPending
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-8 max-w-3xl">
       <button onClick={() => navigate('/cresime')} className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-6">
         <ChevronLeft size={16} /> Cresime
       </button>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">{isEdit ? 'Modifica Cresima' : 'Nuova Cresima'}</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Nome *" error={errors.nome?.message}>
             <input {...register('nome', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
@@ -77,7 +77,7 @@ export default function CresimaForm() {
         </div>
 
         <hr className="border-gray-100" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Data cresima *" error={errors.data_cresima?.message}>
             <input type="date" {...register('data_cresima', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
@@ -90,7 +90,7 @@ export default function CresimaForm() {
           <Field label="Vescovo">
             <input {...register('vescovo')} className={inputCls} />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="N. Registro">
               <input {...register('numero_registro')} className={inputCls} />
             </Field>
@@ -101,7 +101,7 @@ export default function CresimaForm() {
         </div>
 
         <hr className="border-gray-100" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Nome padre">
             <input {...register('padre_nome')} className={inputCls} />
           </Field>

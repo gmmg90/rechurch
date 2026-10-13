@@ -1,0 +1,12 @@
+# Dipendenze per il deploy cloud (oltre a quelle base)
+-r requirements.txt
+
+# Database Postgres persistente (Neon / Supabase / Render Postgres) via DATABASE_URL
+psycopg2-binary==2.9.9
+
+# Backup cloud — Google Drive (service account)
+google-api-python-client==2.149.0
+google-auth==2.35.0
+
+# Backup cloud — Dropbox (refresh token)
+dropbox==12.0.2

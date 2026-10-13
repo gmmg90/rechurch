@@ -8,7 +8,6 @@ env/
 *.db
 *.db-shm
 *.db-wal
-*.accdb
 
 # Environment
 .env
@@ -17,16 +16,6 @@ env/
 # Node
 node_modules/
 dist/
-
-# Local tooling
-.agents/
-.claude/
-
-# Build output
-backend/build/
-installer/Output/
-*.zip
-*.exe
 
 # Editor
 .vscode/

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app import models, schemas
+from app.auth import get_current_user, require_roles
 from app.templates_default import DEFAULT_TEMPLATES, PLACEHOLDERS
 
 router = APIRouter(prefix="/report-templates", tags=["report-templates"])
@@ -36,18 +37,30 @@ def _get_or_create(db: Session, tipo: str) -> models.ReportTemplate:
 
 @router.get("")
 @router.get("/")
-def list_templates(db: Session = Depends(get_db)):
+def list_templates(
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     """Restituisce tutti i template (inizializzandoli se assenti)."""
     return [_get_or_create(db, t) for t in VALID_TIPI]
 
 
 @router.get("/{tipo}", response_model=schemas.ReportTemplateResponse)
-def get_template(tipo: str, db: Session = Depends(get_db)):
+def get_template(
+    tipo: str,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
+):
     return _get_or_create(db, tipo)
 
 
 @router.put("/{tipo}", response_model=schemas.ReportTemplateResponse)
-def update_template(tipo: str, data: schemas.ReportTemplateUpdate, db: Session = Depends(get_db)):
+def update_template(
+    tipo: str,
+    data: schemas.ReportTemplateUpdate,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(require_roles("admin", "segreteria")),
+):
     obj = _get_or_create(db, tipo)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(obj, field, value)
@@ -57,7 +70,11 @@ def update_template(tipo: str, data: schemas.ReportTemplateUpdate, db: Session =
 
 
 @router.post("/{tipo}/reset", response_model=schemas.ReportTemplateResponse)
-def reset_template(tipo: str, db: Session = Depends(get_db)):
+def reset_template(
+    tipo: str,
+    db: Session = Depends(get_db),
+    _: models.Utente = Depends(require_roles("admin", "segreteria")),
+):
     """Ripristina il template ai valori di default."""
     if tipo not in VALID_TIPI:
         raise HTTPException(400, "Tipo non valido")
@@ -78,7 +95,7 @@ def reset_template(tipo: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{tipo}/placeholders")
-def get_placeholders(tipo: str):
+def get_placeholders(tipo: str, _: models.Utente = Depends(get_current_user)):
     """Elenco segnaposti disponibili per il tipo, con etichette leggibili."""
     if tipo not in VALID_TIPI:
         raise HTTPException(400, "Tipo non valido")

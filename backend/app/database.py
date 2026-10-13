@@ -4,16 +4,16 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
-from app.paths import get_db_path, is_frozen
+from app.paths import get_db_path
 
-# In modalità sviluppo carichiamo .env; in modalità frozen NO (per evitare di
-# raccogliere .env casuali nella working directory dell'utente).
-if not is_frozen():
-    load_dotenv()
+load_dotenv()
 
+# DATABASE_URL wins if explicitly set (web / server deployment).
+# Otherwise fall back to the resolved data-dir path (desktop / packaged app),
+# which is backend/rechurch.db in dev and C:\ReChurch\rechurch.db when frozen.
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    DATABASE_URL = f"sqlite:///{get_db_path().as_posix()}"
+    DATABASE_URL = f"sqlite:///{get_db_path()}"
 
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):

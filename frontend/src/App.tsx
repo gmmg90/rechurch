@@ -1,5 +1,9 @@
 import { Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import { ModuliProvider } from './contexts/ModuliContext'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import BattesimiList from './pages/battesimi/BattesimiList'
 import BattesimoForm from './pages/battesimi/BattesimoForm'
@@ -7,44 +11,90 @@ import CresimeList from './pages/cresime/CresimeList'
 import CresimaForm from './pages/cresime/CresimaForm'
 import MatrimoniList from './pages/matrimoni/MatrimoniList'
 import MatrimonioForm from './pages/matrimoni/MatrimonioForm'
-import ImportaDati from './pages/ImportaDati'
-import Impostazioni from './pages/Impostazioni'
-import ModelliCertificati from './pages/ModelliCertificati'
-import BackupEsportazioni from './pages/BackupEsportazioni'
-import CertificatoView from './pages/CertificatoView'
-import AnimeList from './pages/anime/AnimeList'
-import AnimaDettaglio from './pages/anime/AnimaDettaglio'
 import ComunioniList from './pages/comunioni/ComunioniList'
 import ComunioneForm from './pages/comunioni/ComunioneForm'
+import ModelliCertificati from './pages/ModelliCertificati'
+import CertificatoView from './pages/CertificatoView'
+import ImportaDati from './pages/ImportaDati'
+import Impostazioni from './pages/Impostazioni'
+import Utenti from './pages/Utenti'
+import RubricaList from './pages/rubrica/RubricaList'
+import PersonaForm from './pages/rubrica/PersonaForm'
+import PersonaDetail from './pages/rubrica/PersonaDetail'
+import FamigliaDetail from './pages/rubrica/FamigliaDetail'
+import ContabilitaList from './pages/contabilita/ContabilitaList'
+import MovimentoForm from './pages/contabilita/MovimentoForm'
+import ScadenziarioPage from './pages/scadenziario/ScadenziarioPage'
+import Scanner from './pages/Scanner'
+import Amministrazione from './pages/Amministrazione'
+import NotFound from './pages/NotFound'
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/anime" element={<AnimeList />} />
-        <Route path="/anime/:id" element={<AnimaDettaglio />} />
-        <Route path="/battesimi" element={<BattesimiList />} />
-        <Route path="/battesimi/nuovo" element={<BattesimoForm />} />
-        <Route path="/battesimi/:id/modifica" element={<BattesimoForm />} />
-        <Route path="/battesimi/:id/certificato" element={<CertificatoView tipo="battesimi" />} />
-        <Route path="/comunioni" element={<ComunioniList />} />
-        <Route path="/comunioni/nuovo" element={<ComunioneForm />} />
-        <Route path="/comunioni/:id/modifica" element={<ComunioneForm />} />
-        <Route path="/comunioni/:id/certificato" element={<CertificatoView tipo="comunioni" />} />
-        <Route path="/cresime" element={<CresimeList />} />
-        <Route path="/cresime/nuovo" element={<CresimaForm />} />
-        <Route path="/cresime/:id/modifica" element={<CresimaForm />} />
-        <Route path="/cresime/:id/certificato" element={<CertificatoView tipo="cresime" />} />
-        <Route path="/matrimoni" element={<MatrimoniList />} />
-        <Route path="/matrimoni/nuovo" element={<MatrimonioForm />} />
-        <Route path="/matrimoni/:id/modifica" element={<MatrimonioForm />} />
-        <Route path="/matrimoni/:id/certificato" element={<CertificatoView tipo="matrimoni" />} />
-        <Route path="/importa" element={<ImportaDati />} />
-        <Route path="/impostazioni" element={<Impostazioni />} />
-        <Route path="/impostazioni/modelli" element={<ModelliCertificati />} />
-        <Route path="/impostazioni/backup" element={<BackupEsportazioni />} />
-      </Route>
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        {/* Public route */}
+        <Route path="/login" element={<Login />} />
+
+        {/* Protected routes — Layout uses <Outlet /> to render children */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <ModuliProvider>
+                <Layout />
+              </ModuliProvider>
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="battesimi" element={<BattesimiList />} />
+          <Route path="battesimi/nuovo" element={<BattesimoForm />} />
+          <Route path="battesimi/:id/modifica" element={<BattesimoForm />} />
+          <Route path="cresime" element={<CresimeList />} />
+          <Route path="cresime/nuovo" element={<CresimaForm />} />
+          <Route path="cresime/:id/modifica" element={<CresimaForm />} />
+          <Route path="matrimoni" element={<MatrimoniList />} />
+          <Route path="matrimoni/nuovo" element={<MatrimonioForm />} />
+          <Route path="matrimoni/:id/modifica" element={<MatrimonioForm />} />
+          <Route path="comunioni" element={<ComunioniList />} />
+          <Route path="comunioni/nuovo" element={<ComunioneForm />} />
+          <Route path="comunioni/:id/modifica" element={<ComunioneForm />} />
+          <Route path="certificati" element={<ModelliCertificati />} />
+          <Route path="battesimi/:id/certificato" element={<CertificatoView tipo="battesimi" />} />
+          <Route path="comunioni/:id/certificato" element={<CertificatoView tipo="comunioni" />} />
+          <Route path="cresime/:id/certificato" element={<CertificatoView tipo="cresime" />} />
+          <Route path="matrimoni/:id/certificato" element={<CertificatoView tipo="matrimoni" />} />
+          <Route path="importa" element={<ImportaDati />} />
+          <Route path="rubrica" element={<RubricaList />} />
+          <Route path="rubrica/persone/nuova" element={<PersonaForm />} />
+          <Route path="rubrica/persone/:id" element={<PersonaDetail />} />
+          <Route path="rubrica/persone/:id/modifica" element={<PersonaForm />} />
+          <Route path="rubrica/famiglie/:id" element={<FamigliaDetail />} />
+          <Route path="contabilita" element={<ContabilitaList />} />
+          <Route path="contabilita/nuovo" element={<MovimentoForm />} />
+          <Route path="contabilita/:id/modifica" element={<MovimentoForm />} />
+          <Route path="scadenziario" element={<ScadenziarioPage />} />
+          <Route path="scanner" element={<Scanner />} />
+          <Route path="impostazioni" element={<Impostazioni />} />
+          <Route
+            path="utenti"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <Utenti />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="amministrazione"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <Amministrazione />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </AuthProvider>
   )
 }

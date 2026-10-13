@@ -80,6 +80,10 @@ def run_server(port: int, log_path: Path):
 
 
 def main():
+    # Modalità desktop: nessun login richiesto in locale (l'app gira sul PC della
+    # parrocchia). Per l'accesso remoto/web avviare invece uvicorn senza questa var.
+    os.environ.setdefault("RECHURCH_DESKTOP", "1")
+
     # Inizializza la cartella dati
     from app.paths import get_data_dir, ensure_seed_db, get_seed_db_path
     data_dir = get_data_dir()
