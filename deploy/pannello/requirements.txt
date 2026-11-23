@@ -1,0 +1,4 @@
+# Pannello web del gestore (gira sull'host, fuori da Docker)
+fastapi==0.111.0
+uvicorn==0.30.1
+python-multipart==0.0.9

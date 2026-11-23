@@ -15,8 +15,10 @@ PC della parrocchia) sia come **web app accessibile da fuori**, dallo stesso cod
   export Excel.
 - **Scadenziario**: calendario eventi con ricorrenze.
 - **Scanner Documenti**: acquisizione ricevute/documenti da fotocamera (mobile).
-- **Più chiese per parrocchia**: chiesa parrocchiale, sussidiarie e cappelle; ogni sacramento
-  può indicare la chiesa di celebrazione (che compila il luogo sul certificato).
+- **Più chiese per parrocchia**: chiesa parrocchiale, sussidiarie e cappelle, ognuna con
+  registri numerati per anno, cassa, eventi e certificati propri; utenti limitati a una chiesa.
+- **Multi-parrocchia su server** (Kimsufi/OVH): un database per parrocchia, HTTPS automatico,
+  pannello web del gestore con verifica in due passaggi (OTP).
 - **Amministrazione**: attiva/disattiva moduli, statistiche, compleanni e anniversari.
 - **Import da Access**: migrazione one-shot dal vecchio archivio `.accdb`.
 - **Utenti e ruoli** (admin/segreteria/economo/lettura) con login JWT — disattivabile

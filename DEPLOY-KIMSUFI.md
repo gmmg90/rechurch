@@ -30,9 +30,13 @@ OVH/VPS con Ubuntu o Debian) e distribuirlo a **più parrocchie**, ognuna con il
   login fatto su una parrocchia non vale sulle altre.
 - **Un solo aggiornamento per tutte.** Tutte usano la stessa immagine:
   `rechurch.sh update` aggiorna l'intero server.
-- **Più chiese per parrocchia.** Dentro ogni parrocchia, in *Impostazioni →
-  Chiese della parrocchia*, si registrano la chiesa parrocchiale e le altre
-  (sussidiarie, rettorie, cappelle). Vedi [Più chiese](#più-chiese-nella-stessa-parrocchia).
+- **Più chiese per parrocchia.** Dentro ogni parrocchia si registrano la chiesa
+  parrocchiale e le altre (sussidiarie, rettorie, cappelle), ognuna con i propri
+  registri, la propria cassa e, volendo, i propri utenti. Vedi
+  [Più chiese](#più-chiese-nella-stessa-parrocchia).
+- **Pannello web del gestore.** Su un dominio dedicato, con password e codice
+  OTP: creazione delle parrocchie, stato, backup, aggiornamenti. Vedi
+  [§5](#5-pannello-web-del-gestore).
 
 Una parrocchia occupa circa **100–150 MB di RAM** da ferma. Un server con 4 GB
 di RAM regge senza problemi 15–20 parrocchie.
@@ -81,39 +85,42 @@ Nel file `.env` (impostazioni **comuni** a tutte le parrocchie) imposta almeno:
 | Variabile | Scopo |
 |-----------|-------|
 | `ACME_EMAIL` | La tua email: Let's Encrypt la usa per gli avvisi sui certificati |
+| `DOMINIO_BASE` | Il tuo dominio per i sottodomini delle parrocchie (es. `tuodominio.it` → `sanrocco.tuodominio.it`) |
 | `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` | Il tuo account di gestore. Viene creato in **ogni** parrocchia e non compare nella pagina Utenti (vedi DEPLOY.md §2c) |
-| `CLOUD_BACKUP_PROVIDER` + credenziali | Backup fuori dal server (consigliato, vedi §6) |
+| `CLOUD_BACKUP_PROVIDER` + credenziali | Backup fuori dal server (consigliato, vedi §7) |
 
 Poi applica le modifiche con `sudo /opt/rechurch/deploy/rechurch.sh up`.
 
 ## 4. Aggiungere una parrocchia
 
-**DNS.** Per prima cosa crea il record DNS che punta al server:
+**Domini.** Ogni parrocchia ha di default un sottodominio tuo e, se ne ha uno,
+anche un dominio proprio. Nel DNS:
 
-| Tipo | Nome | Valore |
-|------|------|--------|
-| A | `sanrocco.tuodominio.it` | IP del server |
+| Tipo | Nome | Valore | Quando |
+|------|------|--------|--------|
+| A | `*.tuodominio.it` | IP del server | una volta sola: tutti i sottodomini funzionano subito |
+| A | `parrocchiasanrocco.it` | IP del server | per ogni dominio proprio di una parrocchia |
+| A | `gestione.tuodominio.it` | IP del server | il pannello del gestore (coperto anche dal jolly) |
 
-> **Comodo:** con un record jolly `*.tuodominio.it → IP` qualunque nuova
-> parrocchia `<nome>.tuodominio.it` funziona subito, senza toccare il DNS.
-> Una parrocchia può anche usare un dominio proprio (`parrocchiasanrocco.it`):
-> basta che il suo record A punti al server.
->
-> Non aggiungere un record **AAAA** (IPv6) se l'IPv6 non è configurato sul
-> server: Let's Encrypt lo proverebbe per primo e il certificato non verrebbe
-> rilasciato.
+> Non aggiungere record **AAAA** (IPv6) se l'IPv6 non è configurato sul server:
+> Let's Encrypt lo proverebbe per primo e il certificato non verrebbe rilasciato.
 
-**Creazione:**
+**Creazione** (da terminale, oppure dal [pannello](#5-pannello-web-del-gestore)):
 
 ```bash
-sudo /opt/rechurch/deploy/rechurch.sh add sanrocco sanrocco.tuodominio.it "Parrocchia San Rocco" parroco@example.it
+R=/opt/rechurch/deploy/rechurch.sh
+# sottodominio automatico: sanrocco.tuodominio.it (serve DOMINIO_BASE)
+sudo $R add sanrocco auto "Parrocchia San Rocco" parroco@example.it
+# oppure domini espliciti, separati da virgole
+sudo $R add sanmichele sanmichele.tuodominio.it,parrocchiasanmichele.it "Parrocchia San Michele"
+# aggiungere in seguito il dominio proprio di una parrocchia
+sudo $R domini sanrocco sanrocco.tuodominio.it,parrocchiasanrocco.it
 ```
 
 - `sanrocco` è lo *slug*, cioè il nome tecnico: minuscole, numeri e trattini.
-- Più domini per la stessa parrocchia vanno separati da virgole:
-  `parrocchiasanrocco.it,www.parrocchiasanrocco.it`.
 - L'ultimo argomento è l'email dell'amministratore della parrocchia. Se lo ometti
-  viene usato `admin@<dominio>`.
+  viene usato `admin@<primo dominio>`.
+- Lo stesso dominio non può essere usato da due parrocchie.
 
 Lo script crea il database, avvia il container, ottiene il certificato HTTPS e
 stampa **una sola volta** la password iniziale. La password non viene salvata da
@@ -124,7 +131,49 @@ in automatico. Se la chiesa ha un nome diverso, imposta `CHIESA_PRINCIPALE`
 nel file della parrocchia prima del primo avvio, oppure rinominala dalle
 Impostazioni.
 
-## 5. Gestione quotidiana
+## 5. Pannello web del gestore
+
+Una pagina riservata a te per gestire il server senza terminale: elenco delle
+parrocchie con stato, spazio usato e ultimo backup; creazione di una parrocchia;
+backup, riavvio, log e archivi scaricabili; cambio dei domini; nuova password
+per un utente; disattivazione; aggiornamento di ReChurch.
+
+**Installazione** (una volta sola):
+
+```bash
+sudo /opt/rechurch/deploy/rechurch.sh pannello installa gestione.tuodominio.it tua@email.it
+```
+
+Lo script stampa **una password** e un **codice QR** (con la chiave anche in
+chiaro): inquadralo con un'app Authenticator (Google o Microsoft Authenticator,
+Aegis, 1Password…). Per entrare servono email, password e il codice a 6 cifre
+dell'app. La password non viene salvata in chiaro: annotala subito in un
+gestore di password.
+
+Come è protetto:
+- gira sul server (deve poter comandare Docker), ma **non è raggiungibile
+  direttamente**: il firewall accetta la sua porta solo da Caddy, e il pannello
+  stesso rifiuta le connessioni che non arrivano da lì;
+- password + codice OTP, che non si può riusare;
+- dopo 5 tentativi sbagliati da un indirizzo (o 20 in totale) l'accesso si
+  blocca per 15 minuti;
+- la sessione dura 4 ore, è legata a password e OTP (cambiandoli scade) e
+  "Esci" la invalida subito;
+- ogni azione è protetta da token anti-CSRF; per disattivare una parrocchia
+  bisogna riscriverne il nome tecnico.
+
+```bash
+sudo $R pannello password    # nuova password
+sudo $R pannello otp         # nuovo codice QR (es. telefono perso)
+sudo $R pannello stato       # stato del servizio
+sudo $R pannello disattiva   # spegne il pannello e toglie il dominio
+```
+
+> Chi entra nel pannello controlla l'intero server: non condividere l'accesso e
+> tieni l'app Authenticator su un telefono protetto. Il ripristino di un backup
+> si fa solo da terminale (`rechurch.sh restore`), apposta.
+
+## 6. Gestione da terminale
 
 ```bash
 R=/opt/rechurch/deploy/rechurch.sh
@@ -132,6 +181,7 @@ sudo $R list                          # parrocchie e stato (healthy = ok)
 sudo $R logs sanrocco                 # log di una parrocchia (Ctrl+C per uscire)
 sudo $R update                        # aggiorna il codice: backup, build, riavvio di tutte
 sudo $R reset-password sanrocco parroco@example.it
+sudo $R domini sanrocco sanrocco.tuodominio.it,parrocchiasanrocco.it
 sudo $R remove sanrocco               # disattiva; i dati restano in /srv/rechurch/data/sanrocco
 ```
 
@@ -139,7 +189,7 @@ Per cambiare un'impostazione di una sola parrocchia (domini, cartella dei
 backup, ecc.) modifica `/srv/rechurch/parrocchie/<slug>.env` e lancia
 `sudo $R up`.
 
-## 6. Backup
+## 7. Backup
 
 Sono previsti tre livelli:
 
@@ -171,7 +221,7 @@ sudo $R restore sanrocco /srv/rechurch/backups/sanrocco/sanrocco_20261123_033000
 > lavora in modalità WAL e la copia potrebbe essere incompleta. Usa sempre
 > `rechurch.sh backup`.
 
-## 7. Spostare una parrocchia già esistente sul server
+## 8. Spostare una parrocchia già esistente sul server
 
 1. Crea la parrocchia con `rechurch.sh add ...`.
 2. Esporta il DB dalla vecchia installazione (pagina *Impostazioni → Backup →
@@ -185,22 +235,44 @@ password restano quelli del database importato.
 
 ## Più chiese nella stessa parrocchia
 
-- In **Impostazioni → Chiese della parrocchia** l'amministratore aggiunge le
-  chiese, sceglie qual è la parrocchiale (stella) e può disattivare quelle non
-  più in uso. Una chiesa già collegata a dei sacramenti non si può eliminare,
-  solo disattivare.
-- Nei moduli di **battesimi, comunioni, cresime e matrimoni** compare il campo
-  **Chiesa**. Scegliendo una chiesa, il *luogo* del sacramento viene compilato
-  con il suo nome, che è quello stampato sul certificato. Il luogo resta
-  comunque modificabile a mano.
-- Se la parrocchia ha più di una chiesa, nelle **liste** compare il filtro
-  *Tutte le chiese*.
-- Dopo un import dall'archivio Access, il pulsante 🔗 accanto a una chiesa
-  collega a quella chiesa tutti i sacramenti che non ne hanno ancora una.
-- Le API di **scadenziario** (`/scadenziario/eventi/?chiesa_id=`) e
-  **contabilità** (`/contabilita/movimenti/`, `/riepilogo/`, `/export/excel`,
-  tutte con `?chiesa_id=`) accettano già la chiesa. Nelle pagine di questi due
-  moduli il campo non è ancora presente.
+Tutto si configura dentro l'app della parrocchia, come amministratore.
+
+**Chiese** — *Impostazioni → Chiese della parrocchia*: aggiungi le chiese,
+scegli la parrocchiale (stella), disattiva quelle non più in uso (una chiesa con
+sacramenti registrati non si elimina). Per ogni chiesa puoi indicare indirizzo,
+contatti e **rettore**: servono per i certificati.
+
+**Registri separati** — ogni chiesa ha il proprio registro per ciascun
+sacramento, numerato da 1 **ogni anno** (nelle liste: `2026/12`).
+- Nel modulo, lasciando vuoto *N. Registro* il numero viene assegnato in
+  automatico; il campo mostra in anteprima quale sarà (*auto: 13*).
+- Un numero scritto a mano viene accettato solo se non è già usato nello stesso
+  registro (chiesa + anno); altrimenti l'app indica il primo numero libero.
+- I numeri dei sacramenti già registrati (es. importati dall'archivio Access)
+  non vengono toccati.
+- I sacramenti senza chiesa formano il registro della parrocchia.
+- Dopo un import, il pulsante 🔗 accanto a una chiesa collega a quella chiesa
+  tutti i sacramenti che non ne hanno ancora una.
+
+**Utenti di una sola chiesa** — in *Utenti*, campo *Accesso ai dati*: scegliendo
+una chiesa, l'utente (segreteria, economo o lettura) vede e modifica **solo**
+sacramenti, contabilità, eventi e controlli di quella chiesa. Non vede la
+rubrica anime, le impostazioni, l'import e i modelli dei certificati. Gli
+amministratori vedono sempre tutta la parrocchia.
+
+**Contabilità** — ogni movimento appartiene alla **cassa della parrocchia** o
+alla cassa di una chiesa (campo *Cassa*). La pagina mostra il riepilogo per
+cassa con il totale della parrocchia; il filtro *Tutte le casse* e l'export
+Excel lavorano anche su una sola cassa.
+
+**Scadenziario** — ogni evento può essere di una chiesa o di tutta la
+parrocchia; nel calendario c'è il filtro per chiesa.
+
+**Certificati** — per i sacramenti celebrati in una chiesa che non è la
+parrocchiale, l'intestazione riporta la chiesa (con *Parrocchia …* sotto), il
+suo indirizzo e i suoi contatti; se è indicato il rettore, firma lui (*Il
+Rettore*). I campi lasciati vuoti usano i dati della parrocchia. Nei modelli
+dei certificati ci sono i segnaposti `{chiesa_nome}` e `{chiesa_indirizzo}`.
 
 ## Riferimento: variabili per parrocchia
 

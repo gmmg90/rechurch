@@ -25,7 +25,15 @@ HOME_DIR="${RECHURCH_HOME:-/srv/rechurch}"
 IMAGE="${RECHURCH_IMAGE:-rechurch:latest}"
 PROJECT="rechurch"
 
-C_OK=$'\e[32m'; C_WARN=$'\e[33m'; C_ERR=$'\e[31m'; C_B=$'\e[1m'; C_0=$'\e[0m'
+PANNELLO_DIR="${RECHURCH_PANNELLO_DIR:-/opt/rechurch-pannello}"
+PANNELLO_PORT=9300
+
+# Colori solo su terminale (il pannello web legge l'output in chiaro)
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+    C_OK=$'\e[32m'; C_WARN=$'\e[33m'; C_ERR=$'\e[31m'; C_B=$'\e[1m'; C_0=$'\e[0m'
+else
+    C_OK=''; C_WARN=''; C_ERR=''; C_B=''; C_0=''
+fi
 info() { echo "${C_B}==>${C_0} $*"; }
 ok()   { echo "${C_OK}✔${C_0} $*"; }
 warn() { echo "${C_WARN}!${C_0} $*" >&2; }
@@ -69,6 +77,38 @@ random_password() {
 }
 
 need_root() { [[ $EUID -eq 0 ]] || die "Esegui come root (sudo)."; }
+
+# Conferma interattiva; RECHURCH_YES=1 (usato dal pannello web) risponde sì
+conferma() {
+    [[ "${RECHURCH_YES:-}" == "1" ]] && return 0
+    local r; read -r -p "$1 [s/N] " r
+    [[ "$r" =~ ^[sS]$ ]]
+}
+
+# Normalizza e valida una lista di domini separati da virgole.
+# "auto" (o vuoto) = <slug>.<DOMINIO_BASE> del file .env comune.
+valida_domini() {  # valida_domini <slug> <domini> → stampa la lista normalizzata
+    local slug="$1" domains="$2" base d altri out=()
+    domains="$(echo "$domains" | tr 'A-Z' 'a-z' | tr -d ' ')"
+    if [[ -z "$domains" || "$domains" == "auto" ]]; then
+        base="$(get_var "$HOME_DIR/.env" DOMINIO_BASE)"
+        [[ -n "$base" ]] || die "Imposta DOMINIO_BASE in $HOME_DIR/.env oppure indica il dominio."
+        domains="${slug}.${base}"
+    fi
+    for d in ${domains//,/ }; do
+        [[ "$d" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] || die "Dominio non valido: $d"
+        # Già usato da un'altra parrocchia?
+        for altri in "$HOME_DIR"/parrocchie/*.env; do
+            [[ -f "$altri" && "$(basename "$altri" .env)" != "$slug" ]] || continue
+            if [[ ",$(get_var "$altri" DOMAINS)," == *",$d,"* ]]; then
+                die "Il dominio $d è già usato dalla parrocchia $(basename "$altri" .env)."
+            fi
+        done
+        [[ "$d" == "$(get_var "$HOME_DIR/.env" PANNELLO_DOMAIN)" ]] && die "Il dominio $d è quello del pannello."
+        out+=("$d")
+    done
+    (IFS=,; echo "${out[*]}")
+}
 need_init() { [[ -f "$HOME_DIR/.env" ]] || die "Server non inizializzato: esegui prima '$0 init'."; }
 
 valid_slug() { [[ "$1" =~ ^[a-z0-9][a-z0-9-]{1,30}$ ]] || die "Slug non valido '$1': solo minuscole, numeri e '-', 2-31 caratteri (es. sanrocco-gela)."; }
@@ -89,7 +129,7 @@ exists_slug() { [[ -f "$(parish_env "$1")" ]] || die "Parrocchia '$1' non trovat
 generate() {
     need_init
     local compose="$HOME_DIR/docker-compose.yml" caddy="$HOME_DIR/caddy/conf/Caddyfile"
-    local acme slug domains tmp
+    local acme slug domains tmp pannello
     acme="$(get_var "$HOME_DIR/.env" ACME_EMAIL)"
     mkdir -p "$HOME_DIR/caddy/conf" "$HOME_DIR/caddy/data" "$HOME_DIR/caddy/config"
 
@@ -119,6 +159,9 @@ services:
       - ./caddy/conf:/etc/caddy:ro
       - ./caddy/data:/data
       - ./caddy/config:/config
+    # Il pannello del gestore gira sull'host (deve comandare Docker)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks: [rechurch]
     logging:
       driver: json-file
@@ -179,6 +222,16 @@ EOF
             echo "	reverse_proxy p-${slug}:8000"
             echo "}"
         done
+        pannello="$(get_var "$HOME_DIR/.env" PANNELLO_DOMAIN)"
+        if [[ -n "$pannello" ]]; then
+            echo
+            echo "# Pannello del gestore (servizio rechurch-pannello sull'host)"
+            echo "$pannello {"
+            echo "	import comune"
+            echo "	header Cache-Control \"no-store\""
+            echo "	reverse_proxy host.docker.internal:${PANNELLO_PORT}"
+            echo "}"
+        fi
     } > "$tmp"
     cat "$tmp" > "$caddy"; rm -f "$tmp"
 }
@@ -239,20 +292,14 @@ cmd_build() {
 cmd_add() {
     need_root; need_init
     local slug="${1:-}" domains="${2:-}" nome="${3:-}" admin_email="${4:-}"
-    [[ -n "$slug" && -n "$domains" && -n "$nome" ]] || die "Uso: $0 add <slug> <dominio[,altro-dominio]> \"Nome parrocchia\" [email-admin]"
+    [[ -n "$slug" && -n "$nome" ]] || die "Uso: $0 add <slug> <dominio[,altro-dominio]|auto> \"Nome parrocchia\" [email-admin]"
     valid_slug "$slug"
     local envf; envf="$(parish_env "$slug")"
     [[ -f "$envf" ]] && die "La parrocchia '$slug' esiste già."
     [[ -d "$HOME_DIR/data/$slug" && -n "$(ls -A "$HOME_DIR/data/$slug" 2>/dev/null)" ]] && \
         warn "Esiste già una cartella dati per '$slug': verrà riutilizzata (dati esistenti)."
 
-    local d
-    for d in ${domains//,/ }; do
-        [[ "$d" =~ ^[a-z0-9.-]+\.[a-z]{2,}$ ]] || die "Dominio non valido: $d"
-        if grep -qE "^DOMAINS=.*(^|[\",])${d//./\\.}([\",]|$)" "$HOME_DIR"/parrocchie/*.env 2>/dev/null; then
-            die "Il dominio $d è già usato da un'altra parrocchia."
-        fi
-    done
+    domains="$(valida_domini "$slug" "$domains")"
 
     [[ -n "$admin_email" ]] || admin_email="admin@${domains%%,*}"
     local password; password="$(random_password)"
@@ -310,8 +357,7 @@ cmd_remove() {
     need_root; need_init
     local slug="${1:-}"; [[ -n "$slug" ]] || die "Uso: $0 remove <slug>"
     exists_slug "$slug"
-    read -r -p "Disattivare la parrocchia '$slug'? I dati in data/$slug NON vengono cancellati. [s/N] " r
-    [[ "$r" =~ ^[sS]$ ]] || { echo "Annullato."; return; }
+    conferma "Disattivare la parrocchia '$slug'? I dati in data/$slug NON vengono cancellati." || { echo "Annullato."; return; }
     dc stop "p-$slug" >/dev/null 2>&1 || true
     dc rm -f "p-$slug" >/dev/null 2>&1 || true
     mv "$(parish_env "$slug")" "$HOME_DIR/archivio/$slug.$(date +%Y%m%d%H%M).env"
@@ -349,6 +395,15 @@ cmd_update() {
     cmd_build
     cmd_up
     docker image prune -f >/dev/null || true
+    # Pannello del gestore: dipendenze e riavvio col codice nuovo (in differita,
+    # perché l'aggiornamento può essere stato lanciato proprio dal pannello)
+    if [[ -x "$PANNELLO_DIR/venv/bin/pip" ]]; then
+        "$PANNELLO_DIR/venv/bin/pip" install -q -r "$REPO_DIR/deploy/pannello/requirements.txt" || true
+    fi
+    if systemctl is-active --quiet rechurch-pannello 2>/dev/null; then
+        ok "Il pannello si riavvia tra pochi secondi con la nuova versione"
+        (sleep 5; systemctl try-restart rechurch-pannello) >/dev/null 2>&1 &
+    fi
 }
 
 cmd_backup() {
@@ -389,8 +444,7 @@ cmd_restore() {
         cp "$file" "$tmpd/"; db="$tmpd/$(basename "$file")"
     fi
     [[ -f "$db" ]] || die "Nessun database nel file indicato."
-    read -r -p "Sostituire il database di '$slug' con $(basename "$db")? L'attuale viene conservato. [s/N] " r
-    [[ "$r" =~ ^[sS]$ ]] || { rm -rf "$tmpd"; echo "Annullato."; return; }
+    conferma "Sostituire il database di '$slug' con $(basename "$db")? L'attuale viene conservato." || { rm -rf "$tmpd"; echo "Annullato."; return; }
 
     dc stop "p-$slug"
     local ts; ts="$(date +%Y%m%d_%H%M%S)"
@@ -427,6 +481,126 @@ EOF
     ok "Nuova password per $email ($slug): $pw"
 }
 
+cmd_domini() {
+    need_root; need_init
+    local slug="${1:-}" domains="${2:-}"
+    [[ -n "$slug" && -n "$domains" ]] || die "Uso: $0 domini <slug> <dominio[,altro]|auto>"
+    exists_slug "$slug"
+    domains="$(valida_domini "$slug" "$domains")"
+    set_var "$(parish_env "$slug")" DOMAINS "$domains"
+    generate; dc up -d caddy >/dev/null; caddy_reload
+    ok "Domini di '$slug': $domains"
+    warn "Ricorda i record DNS (A) di questi domini verso l'IP del server."
+}
+
+# ── pannello web del gestore ──────────────────────────────────────────────────
+
+pannello_env() { echo "$HOME_DIR/pannello.env"; }
+
+pannello_py() { "$PANNELLO_DIR/venv/bin/python" "$REPO_DIR/deploy/pannello/pannello.py" "$@"; }
+
+cmd_pannello() {
+    need_root; need_init
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        installa) pannello_installa "$@" ;;
+        password) pannello_password ;;
+        otp) pannello_otp ;;
+        stato) systemctl --no-pager status rechurch-pannello || true ;;
+        disattiva)
+            systemctl disable --now rechurch-pannello 2>/dev/null || true
+            del_var "$HOME_DIR/.env" PANNELLO_DOMAIN
+            generate; caddy_reload
+            ok "Pannello disattivato." ;;
+        *) die "Uso: $0 pannello installa <dominio> <email> | password | otp | stato | disattiva" ;;
+    esac
+}
+
+pannello_installa() {
+    local dominio="${1:-}" email="${2:-}"
+    [[ -n "$dominio" && -n "$email" ]] || die "Uso: $0 pannello installa <dominio-pannello> <tua-email>"
+    [[ "$dominio" =~ ^[a-z0-9.-]+\.[a-z]{2,}$ ]] || die "Dominio non valido: $dominio"
+    [[ "$email" =~ ^[^@[:space:]]+@[^@[:space:]]+$ ]] || die "Email non valida: $email"
+    command -v python3 >/dev/null || die "Serve python3"
+
+    info "Ambiente Python del pannello in $PANNELLO_DIR"
+    mkdir -p "$PANNELLO_DIR"
+    [[ -x "$PANNELLO_DIR/venv/bin/python" ]] || python3 -m venv "$PANNELLO_DIR/venv" \
+        || die "Creazione venv fallita (apt-get install python3-venv)"
+    "$PANNELLO_DIR/venv/bin/pip" install -q --upgrade pip
+    "$PANNELLO_DIR/venv/bin/pip" install -q -r "$REPO_DIR/deploy/pannello/requirements.txt"
+
+    local envf; envf="$(pannello_env)"
+    umask 077
+    [[ -f "$envf" ]] || printf '# Pannello del gestore — generato da rechurch.sh pannello installa\n' > "$envf"
+    grep -q '^PANNELLO_SESSION_KEY=' "$envf" || set_var "$envf" PANNELLO_SESSION_KEY "$(random_secret)"
+    set_var "$envf" PANNELLO_EMAIL "$email"
+    set_var "$envf" RECHURCH_HOME "$HOME_DIR"
+    set_var "$envf" RECHURCH_SCRIPT "$REPO_DIR/deploy/rechurch.sh"
+    umask 022
+
+    {
+        echo "[Unit]"
+        echo "Description=ReChurch - pannello web del gestore"
+        echo "After=network-online.target docker.service"
+        echo "Requires=docker.service"
+        echo
+        echo "[Service]"
+        echo "EnvironmentFile=$envf"
+        echo "ExecStart=$PANNELLO_DIR/venv/bin/uvicorn pannello:app --app-dir $REPO_DIR/deploy/pannello --host 0.0.0.0 --port $PANNELLO_PORT"
+        echo "Restart=on-failure"
+        echo "NoNewPrivileges=yes"
+        echo "PrivateTmp=yes"
+        echo
+        echo "[Install]"
+        echo "WantedBy=multi-user.target"
+    } > /etc/systemd/system/rechurch-pannello.service
+
+    # Raggiungibile solo dai container (Caddy), mai direttamente da Internet
+    if command -v ufw >/dev/null; then
+        ufw allow from 172.16.0.0/12 to any port "$PANNELLO_PORT" proto tcp comment 'ReChurch pannello (da Caddy)' >/dev/null || true
+    fi
+
+    set_var "$HOME_DIR/.env" PANNELLO_DOMAIN "$dominio"
+    generate
+    dc up -d caddy >/dev/null
+    caddy_reload
+
+    grep -q '^PANNELLO_PASSWORD_HASH=' "$envf" || pannello_password
+    grep -q '^PANNELLO_TOTP_SECRET=' "$envf" || pannello_otp
+    systemctl daemon-reload
+    systemctl enable rechurch-pannello >/dev/null 2>&1
+    systemctl restart rechurch-pannello
+    ok "Pannello attivo su https://$dominio (serve il record DNS A verso questo server)"
+}
+
+pannello_password() {
+    local envf pw; envf="$(pannello_env)"
+    [[ -f "$envf" ]] || die "Pannello non installato: $0 pannello installa <dominio> <email>"
+    pw="$(random_password)$(random_password)"
+    set_var "$envf" PANNELLO_PASSWORD_HASH "$(printf '%s' "$pw" | pannello_py hash-password)"
+    systemctl restart rechurch-pannello 2>/dev/null || true
+    echo
+    echo "   Password del pannello: $pw"
+    echo
+    warn "Annotala ora in un gestore di password: non viene salvata in chiaro."
+}
+
+pannello_otp() {
+    local envf secret email uri; envf="$(pannello_env)"
+    [[ -f "$envf" ]] || die "Pannello non installato: $0 pannello installa <dominio> <email>"
+    secret="$(pannello_py nuovo-segreto-otp)"
+    set_var "$envf" PANNELLO_TOTP_SECRET "$secret"
+    email="$(get_var "$envf" PANNELLO_EMAIL)"
+    uri="otpauth://totp/ReChurch:${email}?secret=${secret}&issuer=ReChurch"
+    systemctl restart rechurch-pannello 2>/dev/null || true
+    echo
+    echo "   Codice OTP (2FA): aggiungilo all'app Authenticator (Google/Microsoft Authenticator, Aegis, 1Password...)"
+    command -v qrencode >/dev/null && qrencode -t ansiutf8 "$uri"
+    echo "   Chiave da inserire a mano: $secret"
+    echo
+}
+
 cmd_logs()    { need_init; local s="${1:-}"; [[ -z "$s" ]] && { dc logs --tail=100 -f; return; }; [[ "$s" == caddy ]] && { dc logs --tail=200 -f caddy; return; }; exists_slug "$s"; dc logs --tail=200 -f "p-$s"; }
 cmd_restart() { need_root; need_init; local s="${1:-}"; [[ -n "$s" ]] || die "Uso: $0 restart <slug>"; exists_slug "$s"; dc restart "p-$s"; }
 cmd_shell()   { need_root; need_init; local s="${1:-}"; [[ -n "$s" ]] || die "Uso: $0 shell <slug>"; exists_slug "$s"; dc exec "p-$s" sh; }
@@ -436,7 +610,8 @@ cmd_help() {
 ReChurch — gestione multi-parrocchia   (dati in $HOME_DIR)
 
   init                                   prepara $HOME_DIR, builda l'immagine, avvia il proxy
-  add <slug> <dominio[,dom2]> "Nome" [email-admin]
+  add <slug> <dominio[,dom2]|auto> "Nome" [email-admin]
+                                         ("auto" = <slug>.DOMINIO_BASE)
                                          crea una parrocchia (DB nuovo e separato) e la avvia
   list                                   elenca le parrocchie e il loro stato
   up                                     rigenera la configurazione e avvia tutto
@@ -444,7 +619,10 @@ ReChurch — gestione multi-parrocchia   (dati in $HOME_DIR)
   backup [slug|all]                      archivio DB+allegati in $HOME_DIR/backups/<slug>/
   restore <slug> <file.db|.tar.gz>       ripristina il database di una parrocchia
   reset-password <slug> <email>          genera una nuova password per un utente
+  domini <slug> <dom1[,dom2]|auto>       cambia i domini di una parrocchia
   remove <slug>                          disattiva una parrocchia (i dati restano su disco)
+  pannello installa <dominio> <email>    pannello web del gestore (password + codice OTP)
+  pannello password | otp | stato | disattiva
   logs [slug|caddy]   restart <slug>   shell <slug>   build
 
 Esempio:
@@ -465,6 +643,8 @@ main() {
         backup) cmd_backup "$@" ;;
         restore) cmd_restore "$@" ;;
         reset-password) cmd_reset_password "$@" ;;
+        domini) cmd_domini "$@" ;;
+        pannello) cmd_pannello "$@" ;;
         logs) cmd_logs "$@" ;;
         restart) cmd_restart "$@" ;;
         shell) cmd_shell "$@" ;;

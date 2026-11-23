@@ -42,7 +42,8 @@ export DEBIAN_FRONTEND=noninteractive
 step "Aggiornamento del sistema"
 apt-get update -q
 apt-get -y -q -o Dpkg::Options::="--force-confold" upgrade
-apt-get install -y -q ca-certificates curl git openssl ufw fail2ban unattended-upgrades sqlite3 rsync
+apt-get install -y -q ca-certificates curl git openssl ufw fail2ban unattended-upgrades sqlite3 rsync \
+    python3 python3-venv qrencode
 
 step "Fuso orario Europe/Rome"
 timedatectl set-timezone Europe/Rome || true
