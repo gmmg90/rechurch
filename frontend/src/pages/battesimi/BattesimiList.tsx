@@ -5,6 +5,7 @@ import { Search, Plus, Pencil, Trash2, FileDown, Droplets } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { battesimiApi, pdfApi, type Battesimo } from '../../api/client'
 import Pagination from '../../components/Pagination'
+import { numeroRegistro } from '../../utils/date'
 import { ChiesaFilter } from '../../components/ChiesaSelect'
 import { TableSkeleton } from '../../components/LoadingSkeleton'
 
@@ -128,7 +129,7 @@ export default function BattesimiList() {
                       <td className="px-4 py-3 text-gray-600">{b.data_battesimo}</td>
                       <td className="px-4 py-3 text-gray-600">{b.luogo_battesimo}</td>
                       <td className="px-4 py-3 text-gray-600">{b.ministro}</td>
-                      <td className="px-4 py-3 text-gray-500">{b.numero_registro ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">{numeroRegistro(b)}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
                           <a

@@ -60,24 +60,24 @@ export default function App() {
           <Route path="comunioni" element={<ComunioniList />} />
           <Route path="comunioni/nuovo" element={<ComunioneForm />} />
           <Route path="comunioni/:id/modifica" element={<ComunioneForm />} />
-          <Route path="certificati" element={<ModelliCertificati />} />
+          <Route path="certificati" element={<ProtectedRoute soloParrocchia><ModelliCertificati /></ProtectedRoute>} />
           <Route path="verifiche" element={<Verifiche />} />
           <Route path="battesimi/:id/certificato" element={<CertificatoView tipo="battesimi" />} />
           <Route path="comunioni/:id/certificato" element={<CertificatoView tipo="comunioni" />} />
           <Route path="cresime/:id/certificato" element={<CertificatoView tipo="cresime" />} />
           <Route path="matrimoni/:id/certificato" element={<CertificatoView tipo="matrimoni" />} />
-          <Route path="importa" element={<ImportaDati />} />
-          <Route path="rubrica" element={<RubricaList />} />
-          <Route path="rubrica/persone/nuova" element={<PersonaForm />} />
-          <Route path="rubrica/persone/:id" element={<PersonaDetail />} />
-          <Route path="rubrica/persone/:id/modifica" element={<PersonaForm />} />
-          <Route path="rubrica/famiglie/:id" element={<FamigliaDetail />} />
+          <Route path="importa" element={<ProtectedRoute soloParrocchia><ImportaDati /></ProtectedRoute>} />
+          <Route path="rubrica" element={<ProtectedRoute soloParrocchia><RubricaList /></ProtectedRoute>} />
+          <Route path="rubrica/persone/nuova" element={<ProtectedRoute soloParrocchia><PersonaForm /></ProtectedRoute>} />
+          <Route path="rubrica/persone/:id" element={<ProtectedRoute soloParrocchia><PersonaDetail /></ProtectedRoute>} />
+          <Route path="rubrica/persone/:id/modifica" element={<ProtectedRoute soloParrocchia><PersonaForm /></ProtectedRoute>} />
+          <Route path="rubrica/famiglie/:id" element={<ProtectedRoute soloParrocchia><FamigliaDetail /></ProtectedRoute>} />
           <Route path="contabilita" element={<ContabilitaList />} />
           <Route path="contabilita/nuovo" element={<MovimentoForm />} />
           <Route path="contabilita/:id/modifica" element={<MovimentoForm />} />
           <Route path="scadenziario" element={<ScadenziarioPage />} />
           <Route path="scanner" element={<Scanner />} />
-          <Route path="impostazioni" element={<Impostazioni />} />
+          <Route path="impostazioni" element={<ProtectedRoute soloParrocchia><Impostazioni /></ProtectedRoute>} />
           <Route
             path="utenti"
             element={

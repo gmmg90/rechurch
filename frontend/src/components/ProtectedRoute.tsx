@@ -28,14 +28,17 @@ function AccessDenied() {
 interface ProtectedRouteProps {
   children: ReactNode
   roles?: string[]
+  /** Pagina di tutta la parrocchia: vietata agli utenti di una singola chiesa */
+  soloParrocchia?: boolean
 }
 
-export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth()
+export function ProtectedRoute({ children, roles, soloParrocchia }: ProtectedRouteProps) {
+  const { user, isLoading, chiesaUtente } = useAuth()
 
   if (isLoading) return <LoadingSpinner />
   if (!user) return <Navigate to="/login" replace />
   if (roles && !roles.includes(user.ruolo)) return <AccessDenied />
+  if (soloParrocchia && chiesaUtente !== null) return <AccessDenied />
 
   return <>{children}</>
 }

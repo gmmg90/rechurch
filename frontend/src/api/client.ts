@@ -29,6 +29,17 @@ api.interceptors.response.use(
   }
 )
 
+/**
+ * Aggiunge il token di accesso a un link di download (PDF, backup, export).
+ * Un normale <a href> o <iframe> non può inviare l'header Authorization, quindi
+ * per le sole richieste GET il backend accetta anche ?token=.
+ */
+export function withToken(url: string): string {
+  const token = localStorage.getItem('rechurch_token')
+  if (!token) return url
+  return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`
+}
+
 export interface Battesimo {
   id: number
   nome: string
@@ -144,7 +155,12 @@ export interface Chiesa {
   id: number
   nome: string
   indirizzo?: string | null
+  cap?: string | null
   citta?: string | null
+  provincia?: string | null
+  telefono?: string | null
+  email?: string | null
+  rettore?: string | null
   principale: boolean
   attiva: boolean
   ordine: number
@@ -165,6 +181,10 @@ export const chieseApi = {
   update: (id: number, data: Partial<ChiesaInput>) =>
     api.put<Chiesa>(`/chiese/${id}`, data).then(r => r.data),
   delete: (id: number) => api.delete(`/chiese/${id}`),
+  prossimoNumero: (tipo: string, anno: number, chiesa_id?: number | null) =>
+    api.get<{ numero: number; anno: number }>('/chiese/prossimo-numero', {
+      params: { tipo, anno, ...(chiesa_id ? { chiesa_id } : {}) },
+    }).then(r => r.data.numero),
   assegnaSacramenti: (id: number, sovrascrivi = false) =>
     api.post<{ chiesa: string; battesimi: number; comunioni: number; cresime: number; matrimoni: number }>(
       `/chiese/${id}/assegna-sacramenti`, { sovrascrivi, aggiorna_luogo: true },
@@ -350,20 +370,20 @@ export const configApi = {
 
 export const pdfApi = {
   // Download (Content-Disposition: attachment)
-  battesimoUrl:  (id: number) => `/api/pdf/battesimo/${id}`,
-  comunioneUrl:  (id: number) => `/api/pdf/comunione/${id}`,
-  cresimaUrl:    (id: number) => `/api/pdf/cresima/${id}`,
-  matrimonioUrl: (id: number) => `/api/pdf/matrimonio/${id}`,
+  battesimoUrl:  (id: number) => withToken(`/api/pdf/battesimo/${id}`),
+  comunioneUrl:  (id: number) => withToken(`/api/pdf/comunione/${id}`),
+  cresimaUrl:    (id: number) => withToken(`/api/pdf/cresima/${id}`),
+  matrimonioUrl: (id: number) => withToken(`/api/pdf/matrimonio/${id}`),
   // Inline view (apre nel browser)
-  battesimoView:  (id: number) => `/api/pdf/battesimo/${id}?inline=1`,
-  comunioneView:  (id: number) => `/api/pdf/comunione/${id}?inline=1`,
-  cresimaView:    (id: number) => `/api/pdf/cresima/${id}?inline=1`,
-  matrimonioView: (id: number) => `/api/pdf/matrimonio/${id}?inline=1`,
+  battesimoView:  (id: number) => withToken(`/api/pdf/battesimo/${id}?inline=1`),
+  comunioneView:  (id: number) => withToken(`/api/pdf/comunione/${id}?inline=1`),
+  cresimaView:    (id: number) => withToken(`/api/pdf/cresima/${id}?inline=1`),
+  matrimonioView: (id: number) => withToken(`/api/pdf/matrimonio/${id}?inline=1`),
   // Stampa elenco (lista filtrata)
   elencoView: (tipo: 'battesimi' | 'comunioni' | 'cresime' | 'matrimoni', params: Record<string, string | number | undefined>) => {
     const q = new URLSearchParams({ inline: '1' })
     Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') q.append(k, String(v)) })
-    return `/api/pdf/elenco/${tipo}?${q.toString()}`
+    return withToken(`/api/pdf/elenco/${tipo}?${q.toString()}`)
   },
 }
 
@@ -385,7 +405,7 @@ export interface Placeholder {
 export const reportTemplatesApi = {
   list: () => api.get<ReportTemplate[]>('/report-templates/').then(r => r.data),
   // Preview URL already carries a query string so callers can append `&_=<n>` cache-busters.
-  previewUrl: (tipo: string) => `/api/pdf/preview/${tipo}?inline=true`,
+  previewUrl: (tipo: string) => withToken(`/api/pdf/preview/${tipo}?inline=true`),
   get: (tipo: string) => api.get<ReportTemplate>(`/report-templates/${tipo}`).then(r => r.data),
   update: (tipo: string, data: Partial<ReportTemplate>) =>
     api.put<ReportTemplate>(`/report-templates/${tipo}`, data).then(r => r.data),
@@ -437,6 +457,8 @@ export interface AuthUser {
   email: string
   ruolo: string
   attivo: boolean
+  /** Se impostata (e il ruolo non è admin) l'utente vede solo questa chiesa */
+  chiesa_id?: number | null
   ultimo_accesso?: string
   created_at?: string
 }
@@ -452,10 +474,10 @@ export const authApi = {
     api.put('/auth/cambia-password', { password_attuale, nuova_password }).then(r => r.data),
   listUtenti: () => api.get<AuthUser[]>('/auth/utenti').then(r => r.data),
   createUtente: (data: {
-    nome: string; cognome: string; email: string; ruolo: string; password: string
+    nome: string; cognome: string; email: string; ruolo: string; password: string; chiesa_id?: number | null
   }) => api.post<AuthUser>('/auth/utenti', data).then(r => r.data),
   updateUtente: (id: number, data: Partial<{
-    nome: string; cognome: string; email: string; ruolo: string; attivo: boolean
+    nome: string; cognome: string; email: string; ruolo: string; attivo: boolean; chiesa_id: number | null
   }>) => api.put<AuthUser>(`/auth/utenti/${id}`, data).then(r => r.data),
   deleteUtente: (id: number) => api.delete(`/auth/utenti/${id}`).then(r => r.data),
 }
@@ -463,7 +485,7 @@ export const authApi = {
 export const backupApi = {
   esegui: () => api.post<{ filename: string; size_kb: number }>('/backup/esegui').then(r => r.data),
   lista: () => api.get<{ filename: string; size_kb: number; created_at: string }[]>('/backup/lista').then(r => r.data),
-  downloadUrl: (filename: string) => `/api/backup/${filename}`,
+  downloadUrl: (filename: string) => withToken(`/api/backup/${filename}`),
 }
 
 export interface Famiglia {
@@ -559,6 +581,9 @@ export interface MovimentoContabile {
   categoria_nome?: string
   fornitore_id?: number
   fornitore_nome?: string
+  /** null = cassa della parrocchia */
+  chiesa_id?: number | null
+  chiesa_nome?: string
   numero_documento?: string
   metodo_pagamento?: string
   note?: string
@@ -568,7 +593,16 @@ export interface MovimentoContabile {
   updated_at?: string
 }
 
+export interface RiepilogoCassa {
+  chiesa_id: number | null
+  cassa: string
+  entrate: number
+  uscite: number
+  saldo: number
+}
+
 export interface RiepilogoContabile {
+  per_cassa: RiepilogoCassa[]
   totale_entrate: number
   totale_uscite: number
   saldo: number
@@ -594,11 +628,11 @@ export const contabilitaApi = {
 
   listMovimenti: (params?: {
     search?: string; tipo?: string; categoria_id?: number; fornitore_id?: number;
-    dal?: string; al?: string; skip?: number; limit?: number
+    cassa?: string; dal?: string; al?: string; skip?: number; limit?: number
   }) =>
     api.get<MovimentoContabile[]>('/contabilita/movimenti/', { params }).then(r => r.data),
   getMovimento: (id: number) => api.get<MovimentoContabile>(`/contabilita/movimenti/${id}`).then(r => r.data),
-  createMovimento: (data: Omit<MovimentoContabile, 'id' | 'created_at' | 'updated_at' | 'categoria_nome' | 'fornitore_nome'>) =>
+  createMovimento: (data: Omit<MovimentoContabile, 'id' | 'created_at' | 'updated_at' | 'categoria_nome' | 'fornitore_nome' | 'chiesa_nome'>) =>
     api.post<MovimentoContabile>('/contabilita/movimenti/', data).then(r => r.data),
   updateMovimento: (id: number, data: Partial<MovimentoContabile>) =>
     api.put<MovimentoContabile>(`/contabilita/movimenti/${id}`, data).then(r => r.data),
@@ -618,14 +652,15 @@ export const contabilitaApi = {
     api.get(`/contabilita/movimenti/${id}/allegato`, { responseType: 'blob' }).then(r => r.data as Blob),
   deleteAllegato: (id: number) => api.delete(`/contabilita/movimenti/${id}/allegato`),
 
-  riepilogo: (params?: { dal?: string; al?: string }) =>
+  riepilogo: (params?: { dal?: string; al?: string; cassa?: string }) =>
     api.get<RiepilogoContabile>('/contabilita/riepilogo/', { params }).then(r => r.data),
 
-  exportExcelUrl: (dal?: string, al?: string) => {
+  exportExcelUrl: (dal?: string, al?: string, cassa?: string) => {
     const p = new URLSearchParams()
     if (dal) p.set('dal', dal)
     if (al) p.set('al', al)
-    return `/api/contabilita/export/excel${p.toString() ? '?' + p.toString() : ''}`
+    if (cassa) p.set('cassa', cassa)
+    return withToken(`/api/contabilita/export/excel${p.toString() ? '?' + p.toString() : ''}`)
   },
 }
 
@@ -646,6 +681,8 @@ export interface Evento {
   categoria_id?: number
   categoria_nome?: string
   categoria_colore?: string
+  chiesa_id?: number | null
+  chiesa_nome?: string
   ricorrenza?: string
   ricorrenza_fine?: string
   occurrence_start?: string
@@ -663,10 +700,10 @@ export const scadenziarioApi = {
     api.put<CategoriaEvento>(`/scadenziario/categorie/${id}`, data).then(r => r.data),
   deleteCategoria: (id: number) => api.delete(`/scadenziario/categorie/${id}`),
 
-  listEventi: (params?: { dal?: string; al?: string; categoria_id?: number }) =>
+  listEventi: (params?: { dal?: string; al?: string; categoria_id?: number; chiesa_id?: number }) =>
     api.get<Evento[]>('/scadenziario/eventi/', { params }).then(r => r.data),
   getEvento: (id: number) => api.get<Evento>(`/scadenziario/eventi/${id}`).then(r => r.data),
-  createEvento: (data: Omit<Evento, 'id' | 'created_at' | 'updated_at' | 'categoria_nome' | 'categoria_colore' | 'occurrence_start' | 'occurrence_end'>) =>
+  createEvento: (data: Omit<Evento, 'id' | 'created_at' | 'updated_at' | 'categoria_nome' | 'categoria_colore' | 'chiesa_nome' | 'occurrence_start' | 'occurrence_end'>) =>
     api.post<Evento>('/scadenziario/eventi/', data).then(r => r.data),
   updateEvento: (id: number, data: Partial<Evento>) =>
     api.put<Evento>(`/scadenziario/eventi/${id}`, data).then(r => r.data),

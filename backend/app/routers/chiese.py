@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user, require_roles
+from app.permessi import chiesa_utente
+from app.registri import REGISTRI, prossimo_numero
 
 router = APIRouter(prefix="/chiese", tags=["chiese"])
 
@@ -53,13 +55,37 @@ def _unica_principale(db: Session, obj: models.Chiesa) -> None:
         )
 
 
+@router.get("/prossimo-numero")
+def get_prossimo_numero(
+    tipo: str,
+    anno: int,
+    chiesa_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    utente: models.Utente = Depends(get_current_user),
+):
+    """Numero che verrà assegnato al prossimo sacramento nel registro
+    (tipo, chiesa, anno). Serve al modulo per mostrarlo in anteprima."""
+    if tipo not in REGISTRI:
+        raise HTTPException(status_code=400, detail="Tipo non valido")
+    cid = chiesa_utente(utente)
+    if cid is not None:
+        chiesa_id = cid
+    Model, _data = REGISTRI[tipo]
+    return {"tipo": tipo, "anno": anno, "chiesa_id": chiesa_id,
+            "numero": prossimo_numero(db, Model, chiesa_id, anno)}
+
+
 @router.get("/", response_model=List[schemas.ChiesaConUtilizzo])
 def list_chiese(
     solo_attive: bool = False,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     q = db.query(models.Chiesa)
+    # Un utente limitato vede solo la propria chiesa
+    cid = chiesa_utente(utente)
+    if cid is not None:
+        q = q.filter(models.Chiesa.id == cid)
     if solo_attive:
         q = q.filter(models.Chiesa.attiva == True)  # noqa: E712
     chiese = q.order_by(

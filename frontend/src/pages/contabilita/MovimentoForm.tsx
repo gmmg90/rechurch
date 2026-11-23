@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Wallet, Paperclip, X, Download, FileText, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { contabilitaApi } from '../../api/client'
+import { useChiese } from '../../components/ChiesaSelect'
+import { useAuth } from '../../contexts/AuthContext'
 
 const today = () => new Date().toISOString().split('T')[0]
 
@@ -33,6 +35,8 @@ interface FormState {
   numero_documento: string
   metodo_pagamento: string
   note: string
+  /** '' = cassa della parrocchia, altrimenti id della chiesa */
+  cassa: string
 }
 
 const emptyForm = (): FormState => ({
@@ -45,6 +49,7 @@ const emptyForm = (): FormState => ({
   numero_documento: '',
   metodo_pagamento: '',
   note: '',
+  cassa: '',
 })
 
 function fileIcon(nome: string) {
@@ -54,6 +59,8 @@ function fileIcon(nome: string) {
 }
 
 export default function MovimentoForm() {
+  const { data: chiese = [] } = useChiese()
+  const { chiesaUtente } = useAuth()
   const { id } = useParams<{ id?: string }>()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
@@ -92,6 +99,7 @@ export default function MovimentoForm() {
         numero_documento: existing.numero_documento || '',
         metodo_pagamento: existing.metodo_pagamento || '',
         note: existing.note || '',
+        cassa: existing.chiesa_id ? String(existing.chiesa_id) : '',
       })
     }
   }, [existing])
@@ -119,6 +127,9 @@ export default function MovimentoForm() {
         numero_documento: form.numero_documento || undefined,
         metodo_pagamento: form.metodo_pagamento || undefined,
         note: form.note || undefined,
+        // null = cassa della parrocchia (per un utente di una chiesa il server
+        // registra comunque il movimento nella sua chiesa)
+        chiesa_id: form.cassa ? Number(form.cassa) : null,
       }
       let saved
       if (isEdit) {
@@ -285,6 +296,24 @@ export default function MovimentoForm() {
             </select>
           </div>
         </div>
+
+        {/* Cassa: parrocchia o una delle chiese */}
+        {chiese.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cassa</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:bg-gray-50"
+              value={chiesaUtente !== null ? String(chiesaUtente) : form.cassa}
+              onChange={set('cassa')}
+              disabled={chiesaUtente !== null}
+            >
+              {chiesaUtente === null && <option value="">Cassa della parrocchia</option>}
+              {chiese.map(c => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* N° Documento + Metodo Pagamento */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

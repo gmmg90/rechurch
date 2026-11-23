@@ -3,7 +3,9 @@ import { useForm } from 'react-hook-form'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
-import { ChiesaField, chiesaIdValue } from '../../components/ChiesaSelect'
+import toast from 'react-hot-toast'
+import { erroreApi } from '../../utils/date'
+import { ChiesaField, chiesaIdValue, hintNumero, useProssimoNumero } from '../../components/ChiesaSelect'
 import { matrimoniApi, type Matrimonio } from '../../api/client'
 
 type FormData = Omit<Matrimonio, 'id' | 'created_at' | 'updated_at'>
@@ -34,7 +36,10 @@ export default function MatrimonioForm() {
     enabled: isEdit,
   })
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>()
+  const { register, handleSubmit, reset, setValue, getValues, watch, formState: { errors } } = useForm<FormData>()
+  // Anteprima del numero che verrà assegnato nel registro (chiesa + anno)
+  const [wChiesa, wData, wAnno, wNumero] = watch(['chiesa_id', 'data_matrimonio', 'anno_registro', 'numero_registro'])
+  const prossimo = useProssimoNumero('matrimoni', wChiesa, wData, wAnno)
 
   useEffect(() => {
     if (existing) reset(existing)
@@ -43,10 +48,12 @@ export default function MatrimonioForm() {
   const create = useMutation({
     mutationFn: matrimoniApi.create,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['matrimoni'] }); navigate(backTo) },
+    onError: (e) => toast.error(erroreApi(e, 'Errore nel salvataggio')),
   })
   const update = useMutation({
     mutationFn: (data: FormData) => matrimoniApi.update(Number(id), data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['matrimoni'] }); navigate(backTo) },
+    onError: (e) => toast.error(erroreApi(e, 'Errore nel salvataggio')),
   })
 
   const onSubmit = (data: FormData) => {
@@ -108,7 +115,12 @@ export default function MatrimonioForm() {
           </Field>
           <ChiesaField
             registration={register('chiesa_id', { setValueAs: chiesaIdValue })}
-            onSelect={c => { if (c) setValue('luogo_matrimonio', c.nome, { shouldValidate: true }) }}
+            preseleziona={!isEdit}
+            onSelect={(c, auto) => {
+              if (auto && isEdit) return  // in modifica si tiene la chiesa salvata
+              setValue('chiesa_id', c?.id ?? null)
+              if (c && (!auto || !getValues('luogo_matrimonio'))) setValue('luogo_matrimonio', c.nome, { shouldValidate: !auto })
+            }}
             className={inputCls}
           />
           <Field label="Luogo *" error={errors.luogo_matrimonio?.message}>
@@ -119,7 +131,14 @@ export default function MatrimonioForm() {
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="N. Registro">
-              <input {...register('numero_registro')} className={inputCls} />
+              <input
+                {...register('numero_registro')}
+                placeholder={prossimo.numero !== undefined ? `auto: ${prossimo.numero}` : 'automatico'}
+                className={inputCls}
+              />
+              {!String(wNumero ?? '').trim() && (
+                <p className="text-[11px] text-gray-400 mt-1">{hintNumero(prossimo.numero, prossimo.anno)}</p>
+              )}
             </Field>
             <Field label="Anno registro">
               <input type="number" {...register('anno_registro', { valueAsNumber: true })} className={inputCls} />

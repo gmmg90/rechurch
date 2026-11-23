@@ -5,6 +5,7 @@ import { Search, Plus, Pencil, Trash2, FileDown, Heart } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { matrimoniApi, pdfApi, type Matrimonio } from '../../api/client'
 import Pagination from '../../components/Pagination'
+import { numeroRegistro } from '../../utils/date'
 import { ChiesaFilter } from '../../components/ChiesaSelect'
 import { TableSkeleton } from '../../components/LoadingSkeleton'
 
@@ -128,7 +129,7 @@ export default function MatrimoniList() {
                       <td className="px-4 py-3 text-gray-600">{m.data_matrimonio}</td>
                       <td className="px-4 py-3 text-gray-600">{m.luogo_matrimonio}</td>
                       <td className="px-4 py-3 text-gray-600">{m.ministro}</td>
-                      <td className="px-4 py-3 text-gray-500">{m.numero_registro ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">{numeroRegistro(m)}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
                           <a

@@ -8,6 +8,16 @@ import { useChiese } from './ChiesaSelect'
 type Bozza = { nome: string; indirizzo: string; citta: string }
 const vuota: Bozza = { nome: '', indirizzo: '', citta: '' }
 
+// Dati usati nell'intestazione e nella firma dei certificati della chiesa
+const CAMPI_EXTRA = [
+  { k: 'cap', label: 'CAP' },
+  { k: 'provincia', label: 'Provincia' },
+  { k: 'telefono', label: 'Telefono' },
+  { k: 'email', label: 'Email' },
+  { k: 'rettore', label: 'Rettore / responsabile (firma dei certificati)' },
+] as const
+type Extra = Record<(typeof CAMPI_EXTRA)[number]['k'], string>
+
 const inputCls =
   'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300'
 
@@ -21,7 +31,7 @@ export default function GestioneChiese() {
   const qc = useQueryClient()
   const { data: chiese = [], isLoading } = useChiese()
   const [nuova, setNuova] = useState<Bozza>(vuota)
-  const [modifica, setModifica] = useState<{ id: number } & Bozza | null>(null)
+  const [modifica, setModifica] = useState<({ id: number } & Bozza & Extra) | null>(null)
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['chiese'] })
 
@@ -87,7 +97,18 @@ export default function GestioneChiese() {
                   onChange={e => setModifica({ ...modifica, indirizzo: e.target.value })} />
                 <input className={inputCls} value={modifica.citta} placeholder="Città"
                   onChange={e => setModifica({ ...modifica, citta: e.target.value })} />
+                {CAMPI_EXTRA.map(({ k, label }) => (
+                  <input key={k} className={`${inputCls} ${k === 'rettore' ? 'sm:col-span-2' : ''}`}
+                    value={modifica[k]} placeholder={label}
+                    onChange={e => setModifica({ ...modifica, [k]: e.target.value })} />
+                ))}
               </div>
+              {!c.principale && (
+                <p className="text-[11px] text-gray-500">
+                  I certificati dei sacramenti celebrati qui riportano nome, indirizzo e contatti della chiesa;
+                  se indichi il rettore, firma lui. I campi vuoti usano i dati della parrocchia.
+                </p>
+              )}
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setModifica(null)}
                   className="flex items-center gap-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">
@@ -100,6 +121,7 @@ export default function GestioneChiese() {
                     nome: modifica.nome.trim(),
                     indirizzo: modifica.indirizzo.trim() || null,
                     citta: modifica.citta.trim() || null,
+                    ...Object.fromEntries(CAMPI_EXTRA.map(({ k }) => [k, modifica[k].trim() || null])),
                   })}
                   className="flex items-center gap-1 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
                   <Check size={13} /> Salva
@@ -119,6 +141,7 @@ export default function GestioneChiese() {
                 </p>
                 <p className="text-xs text-gray-400 truncate">
                   {[c.indirizzo, c.citta].filter(Boolean).join(', ') || '—'}
+                  {c.rettore ? ` · ${c.rettore}` : ''}
                   {' · '}{utilizzo(c).toLocaleString('it-IT')} {utilizzo(c) === 1 ? 'sacramento' : 'sacramenti'}
                 </p>
               </div>
@@ -138,7 +161,11 @@ export default function GestioneChiese() {
                   <Link2 size={15} />
                 </button>
                 <button title="Modifica"
-                  onClick={() => setModifica({ id: c.id, nome: c.nome, indirizzo: c.indirizzo ?? '', citta: c.citta ?? '' })}
+                  onClick={() => setModifica({
+                    id: c.id, nome: c.nome, indirizzo: c.indirizzo ?? '', citta: c.citta ?? '',
+                    cap: c.cap ?? '', provincia: c.provincia ?? '', telefono: c.telefono ?? '',
+                    email: c.email ?? '', rettore: c.rettore ?? '',
+                  })}
                   className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded">
                   <Pencil size={15} />
                 </button>

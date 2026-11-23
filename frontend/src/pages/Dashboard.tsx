@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../contexts/AuthContext'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Droplets, Star, Heart, Search, X,
@@ -233,6 +234,9 @@ export default function Dashboard() {
   const [activeDonut, setActiveDonut] = useState(0)
   const [layouts, setLayouts] = useState<Layouts>(loadLayouts)
   const isMobile = useIsMobile()
+  // Utente di una sola chiesa: niente rubrica anime (è della parrocchia)
+  const { chiesaUtente } = useAuth()
+  const conRubrica = chiesaUtente === null
 
   const hasDateFilter = !!(dal || al)
 
@@ -277,7 +281,7 @@ export default function Dashboard() {
         { label: 'Battesimi', value: summary?.sacramenti.battesimi ?? stats?.battesimi ?? 0, color: 'text-blue-600',   bg: 'bg-blue-50',   icon: Droplets, to: '/battesimi' },
         { label: 'Cresime',   value: summary?.sacramenti.cresime   ?? stats?.cresime   ?? 0, color: 'text-amber-600', bg: 'bg-amber-50',  icon: Star,     to: '/cresime' },
         { label: 'Matrimoni', value: summary?.sacramenti.matrimoni ?? stats?.matrimoni ?? 0, color: 'text-rose-600',  bg: 'bg-rose-50',   icon: Heart,    to: '/matrimoni' },
-        { label: 'Persone',   value: summary?.persone ?? 0,                                  color: 'text-indigo-600', bg: 'bg-indigo-50', icon: Users,    to: '/rubrica' },
+        ...(conRubrica ? [{ label: 'Persone',   value: summary?.persone ?? 0,                color: 'text-indigo-600', bg: 'bg-indigo-50', icon: Users,    to: '/rubrica' }] : []),
       ].map(({ label, value, color, bg, icon: Icon, to }) => (
         <Link key={label} to={to}
           className={`${bg} rounded-xl p-4 flex items-center gap-3 hover:opacity-90 transition-opacity`}>
@@ -418,7 +422,7 @@ export default function Dashboard() {
           { label: 'Battesimo',  to: '/battesimi/nuovo',         color: 'text-blue-600 bg-blue-50 hover:bg-blue-100',     icon: Droplets },
           { label: 'Cresima',    to: '/cresime/nuovo',           color: 'text-amber-600 bg-amber-50 hover:bg-amber-100',  icon: Star },
           { label: 'Matrimonio', to: '/matrimoni/nuovo',         color: 'text-rose-600 bg-rose-50 hover:bg-rose-100',     icon: Heart },
-          { label: 'Persona',    to: '/rubrica/persone/nuova',   color: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100', icon: Users },
+          ...(conRubrica ? [{ label: 'Persona',    to: '/rubrica/persone/nuova',   color: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100', icon: Users }] : []),
         ].map(({ label, to, color, icon: Icon }) => (
           <Link key={to} to={to} className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${color}`}>
             <Icon size={16} /> <span>Nuovo {label}</span>

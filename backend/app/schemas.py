@@ -28,6 +28,7 @@ class UtenteBase(BaseModel):
     cognome: str
     email: str
     ruolo: str = "lettura"
+    chiesa_id: Optional[int] = None
 
 class UtenteCreate(UtenteBase):
     password: str
@@ -38,6 +39,7 @@ class UtenteUpdate(BaseModel):
     email: Optional[str] = None
     ruolo: Optional[str] = None
     attivo: Optional[bool] = None
+    chiesa_id: Optional[int] = None
 
 class CambiaPasswordRequest(BaseModel):
     password_attuale: str
@@ -451,6 +453,7 @@ class MovimentoContabileResponse(MovimentoContabileBase):
     id: int
     categoria_nome: Optional[str] = None
     fornitore_nome: Optional[str] = None
+    chiesa_nome: Optional[str] = None
     allegato_path: Optional[str] = None
     allegato_nome: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -515,6 +518,7 @@ class EventoUpdate(BaseModel):
 class EventoResponse(EventoBase):
     id: int
     categoria_nome: Optional[str] = None
+    chiesa_nome: Optional[str] = None
     categoria_colore: Optional[str] = None
     # For recurring occurrences, this is the computed occurrence date (not the original)
     occurrence_start: Optional[datetime] = None
@@ -597,6 +601,11 @@ class ChiesaBase(BaseModel):
     nome: str
     indirizzo: Optional[str] = None
     citta: Optional[str] = None
+    cap: Optional[str] = None
+    provincia: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    rettore: Optional[str] = None
     principale: bool = False
     attiva: bool = True
     ordine: int = 0
@@ -611,6 +620,11 @@ class ChiesaUpdate(BaseModel):
     nome: Optional[str] = None
     indirizzo: Optional[str] = None
     citta: Optional[str] = None
+    cap: Optional[str] = None
+    provincia: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    rettore: Optional[str] = None
     principale: Optional[bool] = None
     attiva: Optional[bool] = None
     ordine: Optional[int] = None

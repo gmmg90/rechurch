@@ -94,6 +94,8 @@ PLACEHOLDERS = {
         ("parrocchia_nome", "Nome parrocchia"),
         ("parrocchia_citta", "Città parrocchia"),
         ("parroco", "Parroco"),
+        ("chiesa_nome", "Chiesa di celebrazione"),
+        ("chiesa_indirizzo", "Indirizzo della chiesa"),
         ("oggi", "Data corrente"),
     ],
     "comunioni": [
@@ -112,6 +114,8 @@ PLACEHOLDERS = {
         ("parrocchia_nome", "Nome parrocchia"),
         ("parrocchia_citta", "Città parrocchia"),
         ("parroco", "Parroco"),
+        ("chiesa_nome", "Chiesa di celebrazione"),
+        ("chiesa_indirizzo", "Indirizzo della chiesa"),
         ("oggi", "Data corrente"),
     ],
     "cresime": [
@@ -132,6 +136,8 @@ PLACEHOLDERS = {
         ("parrocchia_nome", "Nome parrocchia"),
         ("parrocchia_citta", "Città parrocchia"),
         ("parroco", "Parroco"),
+        ("chiesa_nome", "Chiesa di celebrazione"),
+        ("chiesa_indirizzo", "Indirizzo della chiesa"),
         ("oggi", "Data corrente"),
     ],
     "matrimoni": [
@@ -156,6 +162,8 @@ PLACEHOLDERS = {
         ("parrocchia_nome", "Nome parrocchia"),
         ("parrocchia_citta", "Città parrocchia"),
         ("parroco", "Parroco"),
+        ("chiesa_nome", "Chiesa di celebrazione"),
+        ("chiesa_indirizzo", "Indirizzo della chiesa"),
         ("oggi", "Data corrente"),
     ],
 }

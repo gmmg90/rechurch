@@ -5,6 +5,7 @@ import { Search, Plus, Pencil, Trash2, FileDown, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cresimeApi, pdfApi, type Cresima } from '../../api/client'
 import Pagination from '../../components/Pagination'
+import { numeroRegistro } from '../../utils/date'
 import { ChiesaFilter } from '../../components/ChiesaSelect'
 import { TableSkeleton } from '../../components/LoadingSkeleton'
 
@@ -130,7 +131,7 @@ export default function CresimeList() {
                       <td className="px-4 py-3 text-gray-600">{c.luogo_cresima}</td>
                       <td className="px-4 py-3 text-gray-600">{c.ministro}</td>
                       <td className="px-4 py-3 text-gray-600">{c.vescovo ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-500">{c.numero_registro ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">{numeroRegistro(c)}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end">
                           <a

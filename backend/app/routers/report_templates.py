@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user, require_roles
+from app.permessi import solo_parrocchia
 from app.templates_default import DEFAULT_TEMPLATES, PLACEHOLDERS
 
 router = APIRouter(prefix="/report-templates", tags=["report-templates"])
@@ -60,6 +61,7 @@ def update_template(
     data: schemas.ReportTemplateUpdate,
     db: Session = Depends(get_db),
     _: models.Utente = Depends(require_roles("admin", "segreteria")),
+    __: models.Utente = Depends(solo_parrocchia),
 ):
     obj = _get_or_create(db, tipo)
     for field, value in data.model_dump(exclude_unset=True).items():
@@ -74,6 +76,7 @@ def reset_template(
     tipo: str,
     db: Session = Depends(get_db),
     _: models.Utente = Depends(require_roles("admin", "segreteria")),
+    __: models.Utente = Depends(solo_parrocchia),
 ):
     """Ripristina il template ai valori di default."""
     if tipo not in VALID_TIPI:

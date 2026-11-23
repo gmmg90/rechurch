@@ -7,6 +7,8 @@ from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
 from app.routers.chiese import applica_chiesa
+from app.permessi import filtra_query, forza_chiesa, verifica_record
+from app.registri import assegna_numero, chiave_registro
 
 router = APIRouter(prefix="/cresime", tags=["cresime"])
 
@@ -20,9 +22,10 @@ def list_cresime(
     limit: int = Query(100, ge=1, le=500),
     response: Response = None,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     q = db.query(models.Cresima)
+    q = filtra_query(q, models.Cresima, utente)
     if search:
         term = f"%{search}%"
         q = q.filter(
@@ -49,11 +52,12 @@ def list_cresime(
 def get_cresima(
     cresima_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Cresima).filter(models.Cresima.id == cresima_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Cresima non trovata")
+    verifica_record(obj, utente, "Cresima non trovata")
     return obj
 
 
@@ -61,10 +65,12 @@ def get_cresima(
 def create_cresima(
     data: schemas.CresimaCreate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = models.Cresima(**data.model_dump())
+    forza_chiesa(obj, utente)
     applica_chiesa(db, obj, "luogo_cresima")
+    assegna_numero(db, obj)
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -76,14 +82,21 @@ def update_cresima(
     cresima_id: int,
     data: schemas.CresimaUpdate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Cresima).filter(models.Cresima.id == cresima_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Cresima non trovata")
+    verifica_record(obj, utente, "Cresima non trovata")
+    prima = chiave_registro(obj)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(obj, field, value)
+    forza_chiesa(obj, utente)
     applica_chiesa(db, obj, "luogo_cresima")
+    # Numero di registro: si (ri)assegna/controlla solo se è cambiato qualcosa
+    # del registro, così i dati storici importati restano come sono.
+    if chiave_registro(obj) != prima:
+        assegna_numero(db, obj)
     db.commit()
     db.refresh(obj)
     return obj
@@ -93,10 +106,11 @@ def update_cresima(
 def delete_cresima(
     cresima_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Cresima).filter(models.Cresima.id == cresima_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Cresima non trovata")
+    verifica_record(obj, utente, "Cresima non trovata")
     db.delete(obj)
     db.commit()

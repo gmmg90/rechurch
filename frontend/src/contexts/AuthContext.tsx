@@ -15,6 +15,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   hasRole: (...roles: string[]) => boolean
+  /** Id della chiesa a cui l'utente è limitato (null = vede tutta la parrocchia) */
+  chiesaUtente: number | null
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -67,8 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user]
   )
 
+  const chiesaUtente = user && user.ruolo !== 'admin' && user.chiesa_id ? user.chiesa_id : null
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, hasRole, chiesaUtente }}>
       {children}
     </AuthContext.Provider>
   )

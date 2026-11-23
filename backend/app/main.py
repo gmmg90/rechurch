@@ -47,8 +47,8 @@ app.add_middleware(
 )
 
 # ── Routers ───────────────────────────────────────────────────────────────────
-# Registered twice: bare (dev — the Vite proxy strips the /api prefix) and under
-# /api (production — the packaged app serves the SPA on / and the API on /api).
+# Tutta l'API sta sotto /api; il resto degli indirizzi appartiene all'app web
+# (es. /battesimi/nuovo deve aprire la pagina, anche da link diretto o ricarica).
 _ROUTERS = [
     auth_router.router,
     backup_router.router,
@@ -70,8 +70,7 @@ _ROUTERS = [
 
 API = "/api"
 for r in _ROUTERS:
-    app.include_router(r)          # bare, e.g. /battesimi
-    app.include_router(r, prefix=API)  # prefixed, e.g. /api/battesimi
+    app.include_router(r, prefix=API)  # es. /api/battesimi
 
 # ── Static files (uploads) ────────────────────────────────────────────────────
 UPLOAD_DIR = str(get_uploads_dir())

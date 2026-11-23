@@ -6,6 +6,7 @@ from sqlalchemy import or_, func
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.permessi import solo_parrocchia
 
 router = APIRouter(prefix="/rubrica", tags=["rubrica"])
 
@@ -32,7 +33,7 @@ def list_persone(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     q = db.query(models.Persona)
     if search:
@@ -56,7 +57,7 @@ def list_persone(
 def create_persona(
     data: schemas.PersonaCreate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     obj = models.Persona(**data.model_dump())
     db.add(obj)
@@ -69,7 +70,7 @@ def create_persona(
 def get_persona(
     persona_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     p = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not p:
@@ -106,7 +107,7 @@ def update_persona(
     persona_id: int,
     data: schemas.PersonaUpdate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     obj = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not obj:
@@ -122,7 +123,7 @@ def update_persona(
 def delete_persona(
     persona_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     obj = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not obj:
@@ -139,7 +140,7 @@ def link_sacramento(
     persona_id: int,
     data: schemas.PersonaSacramentoLink,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     p = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not p:
@@ -169,7 +170,7 @@ def unlink_sacramento(
     persona_id: int,
     tipo: str,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     link = db.query(models.PersonaSacramento).filter(
         models.PersonaSacramento.persona_id == persona_id,
@@ -189,7 +190,7 @@ def list_famiglie(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     q = db.query(models.Famiglia)
     if search:
@@ -217,7 +218,7 @@ def list_famiglie(
 def create_famiglia(
     data: schemas.FamigliaCreate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     obj = models.Famiglia(**data.model_dump())
     db.add(obj)
@@ -232,7 +233,7 @@ def create_famiglia(
 def get_famiglia(
     famiglia_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     fam = db.query(models.Famiglia).filter(models.Famiglia.id == famiglia_id).first()
     if not fam:
@@ -258,7 +259,7 @@ def update_famiglia(
     famiglia_id: int,
     data: schemas.FamigliaUpdate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     fam = db.query(models.Famiglia).filter(models.Famiglia.id == famiglia_id).first()
     if not fam:
@@ -279,7 +280,7 @@ def update_famiglia(
 def delete_famiglia(
     famiglia_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     fam = db.query(models.Famiglia).filter(models.Famiglia.id == famiglia_id).first()
     if not fam:
@@ -298,7 +299,7 @@ def delete_famiglia(
 def compleanni_prossimi(
     giorni: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
-    _: models.Persona = Depends(get_current_user),
+    _: models.Persona = Depends(solo_parrocchia),
 ):
     from datetime import date, timedelta
     today = date.today()

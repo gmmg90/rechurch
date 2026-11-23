@@ -8,6 +8,7 @@ from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
 from app.routers.chiese import applica_chiesa
+from app.permessi import filtra_query, forza_chiesa, verifica_record
 
 router = APIRouter(prefix="/scadenziario", tags=["scadenziario"])
 
@@ -19,6 +20,9 @@ def _hydrate(ev: models.Evento, db: Session, occ_start: datetime = None, occ_end
         if cat:
             r.categoria_nome = cat.nome
             r.categoria_colore = cat.colore
+    if ev.chiesa_id:
+        chiesa = db.get(models.Chiesa, ev.chiesa_id)
+        r.chiesa_nome = chiesa.nome if chiesa else None
     if occ_start:
         r.occurrence_start = occ_start
         r.occurrence_end = occ_end
@@ -106,9 +110,9 @@ def list_eventi(
     categoria_id: Optional[int] = None,
     chiesa_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
-    q = db.query(models.Evento)
+    q = filtra_query(db.query(models.Evento), models.Evento, utente)
     if categoria_id:
         q = q.filter(models.Evento.categoria_id == categoria_id)
     if chiesa_id:
@@ -134,34 +138,39 @@ def list_eventi(
 
 
 @router.post("/eventi/", response_model=schemas.EventoResponse, status_code=201)
-def create_evento(data: schemas.EventoCreate, db: Session = Depends(get_db), _: models.Utente = Depends(get_current_user)):
+def create_evento(data: schemas.EventoCreate, db: Session = Depends(get_db), utente: models.Utente = Depends(get_current_user)):
     obj = models.Evento(**data.model_dump())
+    forza_chiesa(obj, utente)
     applica_chiesa(db, obj, "luogo")
     db.add(obj); db.commit(); db.refresh(obj)
     return _hydrate(obj, db)
 
 
 @router.get("/eventi/{id}", response_model=schemas.EventoResponse)
-def get_evento(id: int, db: Session = Depends(get_db), _: models.Utente = Depends(get_current_user)):
+def get_evento(id: int, db: Session = Depends(get_db), utente: models.Utente = Depends(get_current_user)):
     ev = db.query(models.Evento).filter(models.Evento.id == id).first()
     if not ev: raise HTTPException(404, "Evento non trovato")
+    verifica_record(ev, utente, "Evento non trovato")
     return _hydrate(ev, db)
 
 
 @router.put("/eventi/{id}", response_model=schemas.EventoResponse)
-def update_evento(id: int, data: schemas.EventoUpdate, db: Session = Depends(get_db), _: models.Utente = Depends(get_current_user)):
+def update_evento(id: int, data: schemas.EventoUpdate, db: Session = Depends(get_db), utente: models.Utente = Depends(get_current_user)):
     ev = db.query(models.Evento).filter(models.Evento.id == id).first()
     if not ev: raise HTTPException(404, "Evento non trovato")
+    verifica_record(ev, utente, "Evento non trovato")
     for k, v in data.model_dump(exclude_unset=True).items(): setattr(ev, k, v)
+    forza_chiesa(ev, utente)
     applica_chiesa(db, ev, "luogo")
     db.commit(); db.refresh(ev)
     return _hydrate(ev, db)
 
 
 @router.delete("/eventi/{id}", status_code=204)
-def delete_evento(id: int, db: Session = Depends(get_db), _: models.Utente = Depends(get_current_user)):
+def delete_evento(id: int, db: Session = Depends(get_db), utente: models.Utente = Depends(get_current_user)):
     ev = db.query(models.Evento).filter(models.Evento.id == id).first()
     if not ev: raise HTTPException(404, "Evento non trovato")
+    verifica_record(ev, utente, "Evento non trovato")
     db.delete(ev); db.commit()
 
 
@@ -169,12 +178,12 @@ def delete_evento(id: int, db: Session = Depends(get_db), _: models.Utente = Dep
 def prossimi_eventi(
     giorni: int = 30,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     """Return upcoming events for the next N days — used by dashboard."""
     oggi = date.today()
     fine = oggi + timedelta(days=giorni)
-    q = db.query(models.Evento)
+    q = filtra_query(db.query(models.Evento), models.Evento, utente)
     eventi = q.all()
     result = []
     for ev in eventi:

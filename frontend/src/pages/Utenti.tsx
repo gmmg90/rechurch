@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Users, Plus, Pencil, UserX, UserCheck, X } from 'lucide-react'
 import { authApi, type AuthUser } from '../api/client'
+import { useChiese } from '../components/ChiesaSelect'
 import { useAuth } from '../contexts/AuthContext'
 
 const RUOLI = ['admin', 'segreteria', 'economo', 'lettura'] as const
@@ -28,6 +29,8 @@ interface UserFormData {
   email: string
   ruolo: Ruolo
   password: string
+  /** '' = tutta la parrocchia */
+  chiesa: string
 }
 
 const emptyForm: UserFormData = {
@@ -36,6 +39,7 @@ const emptyForm: UserFormData = {
   email: '',
   ruolo: 'lettura',
   password: '',
+  chiesa: '',
 }
 
 export default function Utenti() {
@@ -44,6 +48,8 @@ export default function Utenti() {
   const [modal, setModal] = useState<'create' | 'edit' | null>(null)
   const [editTarget, setEditTarget] = useState<AuthUser | null>(null)
   const [form, setForm] = useState<UserFormData>(emptyForm)
+  const { data: chiese = [] } = useChiese()
+  const nomeChiesa = (id?: number | null) => chiese.find(c => c.id === id)?.nome
 
   const { data: utenti = [], isLoading } = useQuery({
     queryKey: ['utenti'],
@@ -58,6 +64,7 @@ export default function Utenti() {
         email: data.email,
         ruolo: data.ruolo,
         password: data.password,
+        chiesa_id: data.ruolo === 'admin' || !data.chiesa ? null : Number(data.chiesa),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['utenti'] })
@@ -79,6 +86,7 @@ export default function Utenti() {
         cognome: data.cognome,
         email: data.email,
         ruolo: data.ruolo,
+        chiesa_id: data.ruolo === 'admin' || !data.chiesa ? null : Number(data.chiesa),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['utenti'] })
@@ -121,6 +129,7 @@ export default function Utenti() {
       email: u.email,
       ruolo: u.ruolo as Ruolo,
       password: '',
+      chiesa: u.chiesa_id ? String(u.chiesa_id) : '',
     })
     setEditTarget(u)
     setModal('edit')
@@ -231,6 +240,9 @@ export default function Utenti() {
                   >
                     {ROLE_LABELS[u.ruolo] ?? u.ruolo}
                   </span>
+                  {u.chiesa_id && u.ruolo !== 'admin' && (
+                    <p className="text-[11px] text-gray-500 mt-1">solo {nomeChiesa(u.chiesa_id) ?? 'chiesa eliminata'}</p>
+                  )}
                 </td>
                 <td className="px-4 py-4">
                   <span
@@ -342,6 +354,30 @@ export default function Utenti() {
                   ))}
                 </select>
               </div>
+
+              {chiese.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Accesso ai dati</label>
+                  <select
+                    value={form.ruolo === 'admin' ? '' : form.chiesa}
+                    onChange={set('chiesa')}
+                    disabled={form.ruolo === 'admin'}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white disabled:bg-gray-50"
+                  >
+                    <option value="">Tutta la parrocchia</option>
+                    {chiese.map(c => (
+                      <option key={c.id} value={c.id}>Solo {c.nome}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {form.ruolo === 'admin'
+                      ? 'Gli amministratori vedono sempre tutta la parrocchia.'
+                      : form.chiesa
+                        ? 'Vedrà e modificherà solo sacramenti, contabilità ed eventi di questa chiesa (niente rubrica anime e impostazioni).'
+                        : 'Vede i dati di tutte le chiese della parrocchia.'}
+                  </p>
+                </div>
+              )}
 
               {modal === 'create' && (
                 <div>
