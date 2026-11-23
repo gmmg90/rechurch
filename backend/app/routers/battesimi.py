@@ -6,6 +6,7 @@ from sqlalchemy import or_, extract
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.chiese import applica_chiesa
 
 router = APIRouter(prefix="/battesimi", tags=["battesimi"])
 
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/battesimi", tags=["battesimi"])
 def list_battesimi(
     search: Optional[str] = Query(None),
     anno: Optional[int] = Query(None),
+    chiesa_id: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     response: Response = None,
@@ -31,6 +33,8 @@ def list_battesimi(
                 models.Battesimo.luogo_battesimo.ilike(term),
             )
         )
+    if chiesa_id:
+        q = q.filter(models.Battesimo.chiesa_id == chiesa_id)
     if anno:
         q = q.filter(extract("year", models.Battesimo.data_battesimo) == anno)
 
@@ -60,6 +64,7 @@ def create_battesimo(
     _: models.Utente = Depends(get_current_user),
 ):
     obj = models.Battesimo(**data.model_dump())
+    applica_chiesa(db, obj, "luogo_battesimo")
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -78,6 +83,7 @@ def update_battesimo(
         raise HTTPException(status_code=404, detail="Battesimo non trovato")
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(obj, field, value)
+    applica_chiesa(db, obj, "luogo_battesimo")
     db.commit()
     db.refresh(obj)
     return obj

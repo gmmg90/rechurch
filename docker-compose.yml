@@ -1,4 +1,5 @@
-# ReChurch — deploy self-hosted su VPS (app + reverse proxy HTTPS)
+# ReChurch — deploy self-hosted su VPS di UNA parrocchia (app + reverse proxy HTTPS)
+# Per più parrocchie sullo stesso server vedi DEPLOY-KIMSUFI.md (deploy/rechurch.sh).
 # 1) copia .env.compose.example in .env e compila i valori
 # 2) punta il dominio (record A) all'IP del VPS
 # 3) docker compose up -d --build
@@ -11,6 +12,9 @@ services:
       # Per Postgres, imposta DATABASE_URL nel file .env.
       - DATABASE_URL=${DATABASE_URL:-}
       - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - PARROCCHIA_NOME=${PARROCCHIA_NOME:-}
       - SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL:-}
       - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:-}
       - CLOUD_BACKUP_PROVIDER=${CLOUD_BACKUP_PROVIDER:-none}

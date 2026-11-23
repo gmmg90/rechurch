@@ -6,6 +6,7 @@ from sqlalchemy import or_, extract
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.chiese import applica_chiesa
 
 router = APIRouter(prefix="/cresime", tags=["cresime"])
 
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/cresime", tags=["cresime"])
 def list_cresime(
     search: Optional[str] = Query(None),
     anno: Optional[int] = Query(None),
+    chiesa_id: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     response: Response = None,
@@ -31,6 +33,8 @@ def list_cresime(
                 models.Cresima.luogo_cresima.ilike(term),
             )
         )
+    if chiesa_id:
+        q = q.filter(models.Cresima.chiesa_id == chiesa_id)
     if anno:
         q = q.filter(extract("year", models.Cresima.data_cresima) == anno)
 
@@ -60,6 +64,7 @@ def create_cresima(
     _: models.Utente = Depends(get_current_user),
 ):
     obj = models.Cresima(**data.model_dump())
+    applica_chiesa(db, obj, "luogo_cresima")
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -78,6 +83,7 @@ def update_cresima(
         raise HTTPException(status_code=404, detail="Cresima non trovata")
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(obj, field, value)
+    applica_chiesa(db, obj, "luogo_cresima")
     db.commit()
     db.refresh(obj)
     return obj

@@ -28,6 +28,7 @@ MAX_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.chiese import applica_chiesa
 
 router = APIRouter(prefix="/contabilita", tags=["contabilita"])
 
@@ -158,6 +159,7 @@ def list_movimenti(
     tipo: Optional[str] = None,
     categoria_id: Optional[int] = None,
     fornitore_id: Optional[int] = None,
+    chiesa_id: Optional[int] = None,
     dal: Optional[date] = None,
     al: Optional[date] = None,
     skip: int = 0,
@@ -178,6 +180,8 @@ def list_movimenti(
         q = q.filter(models.MovimentoContabile.categoria_id == categoria_id)
     if fornitore_id:
         q = q.filter(models.MovimentoContabile.fornitore_id == fornitore_id)
+    if chiesa_id:
+        q = q.filter(models.MovimentoContabile.chiesa_id == chiesa_id)
     if dal:
         q = q.filter(models.MovimentoContabile.data >= dal)
     if al:
@@ -206,6 +210,7 @@ def create_movimento(
     _: models.Utente = Depends(get_current_user),
 ):
     obj = models.MovimentoContabile(**data.model_dump())
+    applica_chiesa(db, obj)
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -243,6 +248,7 @@ def update_movimento(
         raise HTTPException(404, "Movimento non trovato")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(obj, k, v)
+    applica_chiesa(db, obj)
     db.commit()
     db.refresh(obj)
     return schemas.MovimentoContabileResponse.model_validate(obj)
@@ -339,10 +345,13 @@ def delete_allegato(
 def riepilogo(
     dal: Optional[date] = None,
     al: Optional[date] = None,
+    chiesa_id: Optional[int] = None,
     db: Session = Depends(get_db),
     _: models.Utente = Depends(get_current_user),
 ):
     q = db.query(models.MovimentoContabile)
+    if chiesa_id:
+        q = q.filter(models.MovimentoContabile.chiesa_id == chiesa_id)
     if dal:
         q = q.filter(models.MovimentoContabile.data >= dal)
     if al:
@@ -382,6 +391,7 @@ def riepilogo(
 def export_excel(
     dal: Optional[date] = None,
     al: Optional[date] = None,
+    chiesa_id: Optional[int] = None,
     db: Session = Depends(get_db),
     _: models.Utente = Depends(get_current_user),
 ):
@@ -390,6 +400,8 @@ def export_excel(
     from openpyxl.utils import get_column_letter
 
     q = db.query(models.MovimentoContabile)
+    if chiesa_id:
+        q = q.filter(models.MovimentoContabile.chiesa_id == chiesa_id)
     if dal:
         q = q.filter(models.MovimentoContabile.data >= dal)
     if al:

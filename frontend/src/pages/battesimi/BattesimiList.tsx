@@ -5,6 +5,7 @@ import { Search, Plus, Pencil, Trash2, FileDown, Droplets } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { battesimiApi, pdfApi, type Battesimo } from '../../api/client'
 import Pagination from '../../components/Pagination'
+import { ChiesaFilter } from '../../components/ChiesaSelect'
 import { TableSkeleton } from '../../components/LoadingSkeleton'
 
 const PAGE_SIZE = 50
@@ -12,18 +13,20 @@ const PAGE_SIZE = 50
 export default function BattesimiList() {
   const [search, setSearch] = useState('')
   const [anno, setAnno] = useState('')
+  const [chiesa, setChiesa] = useState('')
   const [page, setPage] = useState(1)
   const navigate = useNavigate()
   const qc = useQueryClient()
 
   useEffect(() => { document.title = 'Battesimi — ReChurch' }, [])
-  useEffect(() => { setPage(1) }, [search, anno])
+  useEffect(() => { setPage(1) }, [search, anno, chiesa])
 
   const { data: result, isLoading } = useQuery({
-    queryKey: ['battesimi', search, anno, page],
+    queryKey: ['battesimi', search, anno, chiesa, page],
     queryFn: () => battesimiApi.listWithTotal({
       search: search || undefined,
       anno: anno ? Number(anno) : undefined,
+      chiesa_id: chiesa ? Number(chiesa) : undefined,
       skip: (page - 1) * PAGE_SIZE,
       limit: PAGE_SIZE,
     }),
@@ -45,7 +48,7 @@ export default function BattesimiList() {
     if (confirm(`Eliminare il battesimo di ${b.nome} ${b.cognome}?`)) del.mutate(b)
   }
 
-  const hasSearch = !!(search || anno)
+  const hasSearch = !!(search || anno || chiesa)
 
   return (
     <div className="p-4 sm:p-8">
@@ -63,8 +66,8 @@ export default function BattesimiList() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-        <div className="flex gap-3 p-4 border-b border-gray-100">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap gap-3 p-4 border-b border-gray-100">
+          <div className="relative flex-1 min-w-[12rem]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input
               className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
@@ -80,6 +83,7 @@ export default function BattesimiList() {
             value={anno}
             onChange={e => setAnno(e.target.value)}
           />
+          <ChiesaFilter value={chiesa} onChange={setChiesa} />
         </div>
 
         {isLoading ? (

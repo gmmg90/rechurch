@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
+import { ChiesaField, chiesaIdValue } from '../../components/ChiesaSelect'
 import { cresimeApi, type Cresima } from '../../api/client'
 
 type FormData = Omit<Cresima, 'id' | 'created_at' | 'updated_at'>
@@ -33,7 +34,7 @@ export default function CresimaForm() {
     enabled: isEdit,
   })
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>()
 
   useEffect(() => {
     if (existing) reset(existing)
@@ -83,6 +84,11 @@ export default function CresimaForm() {
           <Field label="Data cresima *" error={errors.data_cresima?.message}>
             <input type="date" {...register('data_cresima', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
+          <ChiesaField
+            registration={register('chiesa_id', { setValueAs: chiesaIdValue })}
+            onSelect={c => { if (c) setValue('luogo_cresima', c.nome, { shouldValidate: true }) }}
+            className={inputCls}
+          />
           <Field label="Luogo cresima *" error={errors.luogo_cresima?.message}>
             <input {...register('luogo_cresima', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>

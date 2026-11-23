@@ -37,6 +37,7 @@ export interface Battesimo {
   luogo_nascita?: string
   data_battesimo: string
   luogo_battesimo: string
+  chiesa_id?: number | null
   padre_nome?: string
   madre_nome?: string
   padrino_nome?: string
@@ -57,6 +58,7 @@ export interface Cresima {
   luogo_nascita?: string
   data_cresima: string
   luogo_cresima: string
+  chiesa_id?: number | null
   padre_nome?: string
   madre_nome?: string
   padrino_nome?: string
@@ -82,6 +84,7 @@ export interface Matrimonio {
   sposa_data_nascita?: string
   data_matrimonio: string
   luogo_matrimonio: string
+  chiesa_id?: number | null
   testimone1_nome?: string
   testimone2_nome?: string
   testimone3_nome?: string
@@ -102,6 +105,7 @@ export interface Comunione {
   luogo_nascita?: string
   data_comunione: string
   luogo_comunione?: string
+  chiesa_id?: number | null
   padre_nome?: string
   madre_nome?: string
   ministro?: string
@@ -128,10 +132,49 @@ export interface Stats {
   per_decennio: StatsPeriod[]
 }
 
+export interface SacramentiParams {
+  search?: string
+  anno?: number
+  chiesa_id?: number
+  skip?: number
+  limit?: number
+}
+
+export interface Chiesa {
+  id: number
+  nome: string
+  indirizzo?: string | null
+  citta?: string | null
+  principale: boolean
+  attiva: boolean
+  ordine: number
+  note?: string | null
+  battesimi?: number
+  comunioni?: number
+  cresime?: number
+  matrimoni?: number
+}
+
+export type ChiesaInput = Omit<Chiesa, 'id' | 'battesimi' | 'comunioni' | 'cresime' | 'matrimoni'>
+
+export const chieseApi = {
+  list: (soloAttive = false) =>
+    api.get<Chiesa[]>('/chiese/', { params: soloAttive ? { solo_attive: true } : undefined }).then(r => r.data),
+  create: (data: Partial<ChiesaInput> & { nome: string }) =>
+    api.post<Chiesa>('/chiese/', data).then(r => r.data),
+  update: (id: number, data: Partial<ChiesaInput>) =>
+    api.put<Chiesa>(`/chiese/${id}`, data).then(r => r.data),
+  delete: (id: number) => api.delete(`/chiese/${id}`),
+  assegnaSacramenti: (id: number, sovrascrivi = false) =>
+    api.post<{ chiesa: string; battesimi: number; comunioni: number; cresime: number; matrimoni: number }>(
+      `/chiese/${id}/assegna-sacramenti`, { sovrascrivi, aggiorna_luogo: true },
+    ).then(r => r.data),
+}
+
 export const battesimiApi = {
-  list: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+  list: (params?: SacramentiParams) =>
     api.get<Battesimo[]>('/battesimi/', { params }).then(r => r.data),
-  listWithTotal: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+  listWithTotal: (params?: SacramentiParams) =>
     api.get<Battesimo[]>('/battesimi/', { params }).then(r => ({
       data: r.data,
       total: parseInt(r.headers['x-total-count'] ?? '0', 10),
@@ -145,9 +188,9 @@ export const battesimiApi = {
 }
 
 export const cresimeApi = {
-  list: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+  list: (params?: SacramentiParams) =>
     api.get<Cresima[]>('/cresime/', { params }).then(r => r.data),
-  listWithTotal: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+  listWithTotal: (params?: SacramentiParams) =>
     api.get<Cresima[]>('/cresime/', { params }).then(r => ({
       data: r.data,
       total: parseInt(r.headers['x-total-count'] ?? '0', 10),
@@ -161,9 +204,9 @@ export const cresimeApi = {
 }
 
 export const matrimoniApi = {
-  list: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+  list: (params?: SacramentiParams) =>
     api.get<Matrimonio[]>('/matrimoni/', { params }).then(r => r.data),
-  listWithTotal: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+  listWithTotal: (params?: SacramentiParams) =>
     api.get<Matrimonio[]>('/matrimoni/', { params }).then(r => ({
       data: r.data,
       total: parseInt(r.headers['x-total-count'] ?? '0', 10),
@@ -179,9 +222,9 @@ export const matrimoniApi = {
 }
 
 export const comunioniApi = {
-  list: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+  list: (params?: SacramentiParams) =>
     api.get<Comunione[]>('/comunioni/', { params }).then(r => r.data),
-  listWithTotal: (params?: { search?: string; anno?: number; skip?: number; limit?: number }) =>
+  listWithTotal: (params?: SacramentiParams) =>
     api.get<Comunione[]>('/comunioni/', { params }).then(r => ({
       data: r.data,
       total: parseInt(r.headers['x-total-count'] ?? '0', 10),

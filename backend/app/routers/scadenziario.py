@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.chiese import applica_chiesa
 
 router = APIRouter(prefix="/scadenziario", tags=["scadenziario"])
 
@@ -103,12 +104,15 @@ def list_eventi(
     dal: Optional[date] = None,
     al: Optional[date] = None,
     categoria_id: Optional[int] = None,
+    chiesa_id: Optional[int] = None,
     db: Session = Depends(get_db),
     _: models.Utente = Depends(get_current_user),
 ):
     q = db.query(models.Evento)
     if categoria_id:
         q = q.filter(models.Evento.categoria_id == categoria_id)
+    if chiesa_id:
+        q = q.filter(models.Evento.chiesa_id == chiesa_id)
     eventi = q.all()
 
     _dal = dal or date.today().replace(day=1)
@@ -132,6 +136,7 @@ def list_eventi(
 @router.post("/eventi/", response_model=schemas.EventoResponse, status_code=201)
 def create_evento(data: schemas.EventoCreate, db: Session = Depends(get_db), _: models.Utente = Depends(get_current_user)):
     obj = models.Evento(**data.model_dump())
+    applica_chiesa(db, obj, "luogo")
     db.add(obj); db.commit(); db.refresh(obj)
     return _hydrate(obj, db)
 
@@ -148,6 +153,7 @@ def update_evento(id: int, data: schemas.EventoUpdate, db: Session = Depends(get
     ev = db.query(models.Evento).filter(models.Evento.id == id).first()
     if not ev: raise HTTPException(404, "Evento non trovato")
     for k, v in data.model_dump(exclude_unset=True).items(): setattr(ev, k, v)
+    applica_chiesa(db, ev, "luogo")
     db.commit(); db.refresh(ev)
     return _hydrate(ev, db)
 

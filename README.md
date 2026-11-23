@@ -15,6 +15,8 @@ PC della parrocchia) sia come **web app accessibile da fuori**, dallo stesso cod
   export Excel.
 - **Scadenziario**: calendario eventi con ricorrenze.
 - **Scanner Documenti**: acquisizione ricevute/documenti da fotocamera (mobile).
+- **Più chiese per parrocchia**: chiesa parrocchiale, sussidiarie e cappelle; ogni sacramento
+  può indicare la chiesa di celebrazione (che compila il luogo sul certificato).
 - **Amministrazione**: attiva/disattiva moduli, statistiche, compleanni e anniversari.
 - **Import da Access**: migrazione one-shot dal vecchio archivio `.accdb`.
 - **Utenti e ruoli** (admin/segreteria/economo/lettura) con login JWT — disattivabile
@@ -58,6 +60,7 @@ Apri <http://localhost:5173>. Al primo avvio viene creato l'utente
 | Sviluppo | sopra | attivo |
 | **Desktop** (PC parrocchia, installer Windows) | [BUILD.md](BUILD.md) | disattivato in locale |
 | **Web** (accessibile da fuori, deploy gratuito) | [DEPLOY.md](DEPLOY.md) | attivo |
+| **Server dedicato multi-parrocchia** (Kimsufi/OVH, un DB per parrocchia) | [DEPLOY-KIMSUFI.md](DEPLOY-KIMSUFI.md) | attivo |
 | **Backup su cloud** (Google Drive/Dropbox) | [DEPLOY.md](DEPLOY.md#2-backup-automatico-su-cloud) | — |
 
 ## Struttura
@@ -66,8 +69,10 @@ Apri <http://localhost:5173>. Al primo avvio viene creato l'utente
 backend/          FastAPI (app/), packaging desktop (launcher.py, rechurch.spec)
 frontend/         React + Vite
 installer/         Inno Setup (installer Windows)
-Dockerfile         immagine per il deploy cloud
+Dockerfile         immagine per il deploy cloud / server
+deploy/            multi-parrocchia su server dedicato (rechurch.sh, kimsufi-setup.sh)
 render.yaml        blueprint deploy gratuito (Render)
 BUILD.md           build dell'app desktop Windows
 DEPLOY.md          deploy web gratuito + backup cloud
+DEPLOY-KIMSUFI.md  più parrocchie su un server Kimsufi/OVH
 ```

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
+import { ChiesaField, chiesaIdValue } from '../../components/ChiesaSelect'
 import { matrimoniApi, type Matrimonio } from '../../api/client'
 
 type FormData = Omit<Matrimonio, 'id' | 'created_at' | 'updated_at'>
@@ -33,7 +34,7 @@ export default function MatrimonioForm() {
     enabled: isEdit,
   })
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>()
 
   useEffect(() => {
     if (existing) reset(existing)
@@ -105,6 +106,11 @@ export default function MatrimonioForm() {
           <Field label="Data matrimonio *" error={errors.data_matrimonio?.message}>
             <input type="date" {...register('data_matrimonio', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
+          <ChiesaField
+            registration={register('chiesa_id', { setValueAs: chiesaIdValue })}
+            onSelect={c => { if (c) setValue('luogo_matrimonio', c.nome, { shouldValidate: true }) }}
+            className={inputCls}
+          />
           <Field label="Luogo *" error={errors.luogo_matrimonio?.message}>
             <input {...register('luogo_matrimonio', { required: 'Campo obbligatorio' })} className={inputCls} />
           </Field>
