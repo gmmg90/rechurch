@@ -28,6 +28,7 @@ class UtenteBase(BaseModel):
     cognome: str
     email: str
     ruolo: str = "lettura"
+    chiesa_id: Optional[int] = None
 
 class UtenteCreate(UtenteBase):
     password: str
@@ -38,6 +39,7 @@ class UtenteUpdate(BaseModel):
     email: Optional[str] = None
     ruolo: Optional[str] = None
     attivo: Optional[bool] = None
+    chiesa_id: Optional[int] = None
 
 class CambiaPasswordRequest(BaseModel):
     password_attuale: str
@@ -94,6 +96,7 @@ class BattesimoBase(BaseModel):
     luogo_nascita: Optional[str] = None
     data_battesimo: date
     luogo_battesimo: str
+    chiesa_id: Optional[int] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
     padrino_nome: Optional[str] = None
@@ -115,6 +118,7 @@ class BattesimoUpdate(BaseModel):
     luogo_nascita: Optional[str] = None
     data_battesimo: OptDate = None
     luogo_battesimo: Optional[str] = None
+    chiesa_id: Optional[int] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
     padrino_nome: Optional[str] = None
@@ -142,6 +146,7 @@ class CresimaBase(BaseModel):
     luogo_nascita: Optional[str] = None
     data_cresima: date
     luogo_cresima: str
+    chiesa_id: Optional[int] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
     padrino_nome: Optional[str] = None
@@ -164,6 +169,7 @@ class CresimaUpdate(BaseModel):
     luogo_nascita: Optional[str] = None
     data_cresima: OptDate = None
     luogo_cresima: Optional[str] = None
+    chiesa_id: Optional[int] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
     padrino_nome: Optional[str] = None
@@ -192,6 +198,7 @@ class ComunioneBase(BaseModel):
     luogo_nascita: Optional[str] = None
     data_comunione: date
     luogo_comunione: Optional[str] = None
+    chiesa_id: Optional[int] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
     ministro: Optional[str] = None
@@ -211,6 +218,7 @@ class ComunioneUpdate(BaseModel):
     luogo_nascita: Optional[str] = None
     data_comunione: OptDate = None
     luogo_comunione: Optional[str] = None
+    chiesa_id: Optional[int] = None
     padre_nome: Optional[str] = None
     madre_nome: Optional[str] = None
     ministro: Optional[str] = None
@@ -240,6 +248,7 @@ class MatrimonioBase(BaseModel):
     sposa_data_nascita: OptDate = None
     data_matrimonio: date
     luogo_matrimonio: str
+    chiesa_id: Optional[int] = None
     testimone1_nome: Optional[str] = None
     testimone2_nome: Optional[str] = None
     testimone3_nome: Optional[str] = None
@@ -265,6 +274,7 @@ class MatrimonioUpdate(BaseModel):
     sposa_data_nascita: OptDate = None
     data_matrimonio: OptDate = None
     luogo_matrimonio: Optional[str] = None
+    chiesa_id: Optional[int] = None
     testimone1_nome: Optional[str] = None
     testimone2_nome: Optional[str] = None
     testimone3_nome: Optional[str] = None
@@ -419,6 +429,7 @@ class MovimentoContabileBase(BaseModel):
     descrizione: str
     categoria_id: Optional[int] = None
     fornitore_id: Optional[int] = None
+    chiesa_id: Optional[int] = None
     numero_documento: Optional[str] = None
     metodo_pagamento: Optional[str] = None
     note: Optional[str] = None
@@ -433,6 +444,7 @@ class MovimentoContabileUpdate(BaseModel):
     descrizione: Optional[str] = None
     categoria_id: Optional[int] = None
     fornitore_id: Optional[int] = None
+    chiesa_id: Optional[int] = None
     numero_documento: Optional[str] = None
     metodo_pagamento: Optional[str] = None
     note: Optional[str] = None
@@ -441,6 +453,7 @@ class MovimentoContabileResponse(MovimentoContabileBase):
     id: int
     categoria_nome: Optional[str] = None
     fornitore_nome: Optional[str] = None
+    chiesa_nome: Optional[str] = None
     allegato_path: Optional[str] = None
     allegato_nome: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -480,6 +493,7 @@ class EventoBase(BaseModel):
     data_fine: Optional[datetime] = None
     tutto_il_giorno: bool = False
     luogo: Optional[str] = None
+    chiesa_id: Optional[int] = None
     categoria_id: Optional[int] = None
     ricorrenza: Optional[str] = None
     ricorrenza_fine: OptDate = None
@@ -495,6 +509,7 @@ class EventoUpdate(BaseModel):
     data_fine: Optional[datetime] = None
     tutto_il_giorno: Optional[bool] = None
     luogo: Optional[str] = None
+    chiesa_id: Optional[int] = None
     categoria_id: Optional[int] = None
     ricorrenza: Optional[str] = None
     ricorrenza_fine: OptDate = None
@@ -503,6 +518,7 @@ class EventoUpdate(BaseModel):
 class EventoResponse(EventoBase):
     id: int
     categoria_nome: Optional[str] = None
+    chiesa_nome: Optional[str] = None
     categoria_colore: Optional[str] = None
     # For recurring occurrences, this is the computed occurrence date (not the original)
     occurrence_start: Optional[datetime] = None
@@ -577,3 +593,62 @@ class ReportTemplateResponse(BaseModel):
     updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+# ─── Chiese (luoghi di culto della parrocchia) ────────────────────────────────
+
+class ChiesaBase(BaseModel):
+    nome: str
+    indirizzo: Optional[str] = None
+    citta: Optional[str] = None
+    cap: Optional[str] = None
+    provincia: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    rettore: Optional[str] = None
+    principale: bool = False
+    attiva: bool = True
+    ordine: int = 0
+    note: Optional[str] = None
+
+
+class ChiesaCreate(ChiesaBase):
+    pass
+
+
+class ChiesaUpdate(BaseModel):
+    nome: Optional[str] = None
+    indirizzo: Optional[str] = None
+    citta: Optional[str] = None
+    cap: Optional[str] = None
+    provincia: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    rettore: Optional[str] = None
+    principale: Optional[bool] = None
+    attiva: Optional[bool] = None
+    ordine: Optional[int] = None
+    note: Optional[str] = None
+
+
+class ChiesaResponse(ChiesaBase):
+    id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ChiesaConUtilizzo(ChiesaResponse):
+    """Chiesa con il numero di registrazioni che la usano."""
+    battesimi: int = 0
+    comunioni: int = 0
+    cresime: int = 0
+    matrimoni: int = 0
+
+
+class AssegnaChiesaRequest(BaseModel):
+    # Se True riassegna anche i sacramenti già collegati a un'altra chiesa
+    sovrascrivi: bool = False
+    # Aggiorna anche il testo "luogo" con il nome della chiesa
+    aggiorna_luogo: bool = True

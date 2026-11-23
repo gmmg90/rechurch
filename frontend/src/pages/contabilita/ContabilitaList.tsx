@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Pencil, Trash2, Download, Wallet, TrendingUp, TrendingDown, Scale, Paperclip } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { contabilitaApi, type CategoriaContabile, type Fornitore } from '../../api/client'
+import { ChiesaFilter, useChiese } from '../../components/ChiesaSelect'
+import { useAuth } from '../../contexts/AuthContext'
 
 type Tab = 'movimenti' | 'categorie' | 'fornitori'
 
@@ -34,6 +36,11 @@ export default function ContabilitaList() {
   const [rawSearch, setRawSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [tipoFilter, setTipoFilter] = useState('')
+  // Cassa: '' = tutte, 'parrocchia' = cassa della parrocchia, altrimenti id chiesa
+  const [cassa, setCassa] = useState('')
+  const { data: chiese = [] } = useChiese()
+  const { chiesaUtente } = useAuth()
+  const conCasse = chiese.length > 0 && chiesaUtente === null
   const [dal, setDal] = useState('')
   const [al, setAl] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
@@ -61,15 +68,16 @@ export default function ContabilitaList() {
   // ─── Queries ───────────────────────────────────────────────────────────────
 
   const { data: riepilogo } = useQuery({
-    queryKey: ['contabilita-riepilogo', dal, al],
-    queryFn: () => contabilitaApi.riepilogo({ dal: dal || undefined, al: al || undefined }),
+    queryKey: ['contabilita-riepilogo', dal, al, cassa],
+    queryFn: () => contabilitaApi.riepilogo({ dal: dal || undefined, al: al || undefined, cassa: cassa || undefined }),
   })
 
   const { data: movimenti = [], isLoading: loadingMovimenti } = useQuery({
-    queryKey: ['movimenti', debouncedSearch, tipoFilter, dal, al],
+    queryKey: ['movimenti', debouncedSearch, tipoFilter, dal, al, cassa],
     queryFn: () => contabilitaApi.listMovimenti({
       search: debouncedSearch || undefined,
       tipo: tipoFilter || undefined,
+      cassa: cassa || undefined,
       dal: dal || undefined,
       al: al || undefined,
     }),
@@ -254,6 +262,40 @@ export default function ContabilitaList() {
         </div>
       </div>
 
+      {/* Riepilogo per cassa (chiese + parrocchia) */}
+      {conCasse && !cassa && (riepilogo?.per_cassa?.length ?? 0) > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b border-gray-100">
+                <th className="px-4 py-2.5 font-medium">Cassa</th>
+                <th className="px-4 py-2.5 font-medium text-right">Entrate</th>
+                <th className="px-4 py-2.5 font-medium text-right">Uscite</th>
+                <th className="px-4 py-2.5 font-medium text-right">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {riepilogo!.per_cassa.map(c => (
+                <tr key={c.chiesa_id ?? 'parrocchia'} className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setCassa(c.chiesa_id ? String(c.chiesa_id) : 'parrocchia')}
+                  title="Mostra solo questa cassa">
+                  <td className="px-4 py-2.5 font-medium text-gray-800">{c.cassa}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-green-600">{formatEur(c.entrate)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-red-600">{formatEur(c.uscite)}</td>
+                  <td className={`px-4 py-2.5 text-right tabular-nums font-semibold ${c.saldo >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>{formatEur(c.saldo)}</td>
+                </tr>
+              ))}
+              <tr className="bg-gray-50">
+                <td className="px-4 py-2.5 font-semibold text-gray-700">Totale parrocchia</td>
+                <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-green-700">{formatEur(riepilogo!.totale_entrate)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-red-700">{formatEur(riepilogo!.totale_uscite)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums font-bold text-indigo-700">{formatEur(riepilogo!.saldo)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* Tab switcher */}
       <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
         {(['movimenti', 'categorie', 'fornitori'] as Tab[]).map(t => (
@@ -292,6 +334,14 @@ export default function ContabilitaList() {
               <option value="entrata">Entrate</option>
               <option value="uscita">Uscite</option>
             </select>
+            {conCasse && (
+              <ChiesaFilter
+                value={cassa}
+                onChange={setCassa}
+                tutte="Tutte le casse"
+                extra={[{ value: 'parrocchia', label: 'Cassa parrocchia' }]}
+              />
+            )}
             <div className="flex items-center gap-2">
               <label className="text-xs text-gray-500">Dal</label>
               <input
@@ -312,7 +362,7 @@ export default function ContabilitaList() {
             </div>
             <div className="flex gap-2 ml-auto">
               <a
-                href={contabilitaApi.exportExcelUrl(dal || undefined, al || undefined)}
+                href={contabilitaApi.exportExcelUrl(dal || undefined, al || undefined, cassa || undefined)}
                 className="flex items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                 download
               >
@@ -341,6 +391,7 @@ export default function ContabilitaList() {
                     <th className="px-4 py-3 font-medium">Descrizione</th>
                     <th className="px-4 py-3 font-medium">Categoria</th>
                     <th className="px-4 py-3 font-medium">Fornitore</th>
+                    {conCasse && <th className="px-4 py-3 font-medium">Cassa</th>}
                     <th className="px-4 py-3 font-medium text-right">Importo</th>
                     <th className="px-4 py-3 font-medium w-24"></th>
                   </tr>
@@ -361,6 +412,7 @@ export default function ContabilitaList() {
                       <td className="px-4 py-3 font-medium text-gray-800">{m.descrizione}</td>
                       <td className="px-4 py-3 text-gray-600">{m.categoria_nome ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-600">{m.fornitore_nome ?? '—'}</td>
+                      {conCasse && <td className="px-4 py-3 text-gray-600">{m.chiesa_nome ?? '—'}</td>}
                       <td className={`px-4 py-3 text-right font-semibold tabular-nums ${
                         m.tipo === 'entrata' ? 'text-green-600' : 'text-red-600'
                       }`}>

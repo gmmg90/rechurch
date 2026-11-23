@@ -20,6 +20,11 @@ from datetime import timedelta
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _valida_chiesa(db: Session, chiesa_id) -> None:
+    if chiesa_id is not None and db.get(models.Chiesa, chiesa_id) is None:
+        raise HTTPException(status_code=400, detail="Chiesa non trovata")
+
+
 @router.post("/login", response_model=schemas.TokenResponse)
 def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.Utente).filter(models.Utente.email == data.email).first()
@@ -99,8 +104,10 @@ def create_utente(
         email=data.email,
         password_hash=hash_password(data.password),
         ruolo=data.ruolo,
+        chiesa_id=data.chiesa_id,
         attivo=True,
     )
+    _valida_chiesa(db, data.chiesa_id)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -130,6 +137,8 @@ def update_utente(
         )
 
     update_data = data.model_dump(exclude_unset=True)
+    if "chiesa_id" in update_data:
+        _valida_chiesa(db, update_data["chiesa_id"])
     for field, value in update_data.items():
         setattr(user, field, value)
 

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional
 import os
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -18,7 +18,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 hours
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # auto_error=False so a missing token doesn't hard-fail: in desktop mode we
 # transparently fall back to a local admin user instead of demanding a login.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def _owner_email() -> Optional[str]:
@@ -87,6 +87,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 def get_current_user(
+    request: Request,
     token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> models.Utente:
@@ -99,6 +100,11 @@ def get_current_user(
         detail="Token non valido o scaduto",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    # I link di download (PDF, backup, export, allegati) si aprono con un
+    # normale <a href>, che non può mandare l'header Authorization: per le sole
+    # richieste GET accettiamo il token anche come parametro ?token=.
+    if not token and request.method == "GET":
+        token = request.query_params.get("token")
     if not token:
         raise credentials_exception
     try:

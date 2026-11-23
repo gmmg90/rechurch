@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { CalendarDays, Plus, X, Pencil, Trash2, MapPin, RotateCcw, Tag, Settings2 } from 'lucide-react'
 import { scadenziarioApi, type Evento } from '../../api/client'
+import { ChiesaFilter } from '../../components/ChiesaSelect'
 import EventoModal from './EventoModal'
 import GestisciCategorie from './GestisciCategorie'
 
@@ -25,6 +26,7 @@ export default function ScadenziarioPage() {
   const [defaultStart, setDefaultStart] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [showCategorie, setShowCategorie] = useState(false)
+  const [chiesa, setChiesa] = useState('')
 
   const { data: categorie = [] } = useQuery({
     queryKey: ['scadenziario-categorie'],
@@ -32,8 +34,11 @@ export default function ScadenziarioPage() {
   })
 
   const { data: eventi = [] } = useQuery({
-    queryKey: ['scadenziario-eventi', range.dal, range.al],
-    queryFn: () => scadenziarioApi.listEventi({ dal: range.dal || undefined, al: range.al || undefined }),
+    queryKey: ['scadenziario-eventi', range.dal, range.al, chiesa],
+    queryFn: () => scadenziarioApi.listEventi({
+      dal: range.dal || undefined, al: range.al || undefined,
+      chiesa_id: chiesa ? Number(chiesa) : undefined,
+    }),
     enabled: !!range.dal,
   })
 
@@ -106,7 +111,8 @@ export default function ScadenziarioPage() {
             <p className="text-gray-500 text-sm">Calendario eventi parrocchiali</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <ChiesaFilter value={chiesa} onChange={setChiesa} />
           <button
             onClick={() => setShowCategorie(true)}
             className="flex items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
@@ -189,6 +195,12 @@ export default function ScadenziarioPage() {
                 <div>
                   <p className="font-medium text-gray-500 text-xs uppercase tracking-wide mb-0.5">Fine</p>
                   <p>{formatDateTime(selectedEvento.occurrence_end || selectedEvento.data_fine, selectedEvento.tutto_il_giorno)}</p>
+                </div>
+              )}
+              {selectedEvento.chiesa_nome && selectedEvento.chiesa_nome !== selectedEvento.luogo && (
+                <div className="flex items-start gap-1.5">
+                  <MapPin size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />
+                  <span>{selectedEvento.chiesa_nome}</span>
                 </div>
               )}
               {selectedEvento.luogo && (

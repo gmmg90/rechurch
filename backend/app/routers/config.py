@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user, require_roles
+from app.permessi import solo_parrocchia
 from app.paths import get_uploads_dir
 
 router = APIRouter(prefix="/config", tags=["config"])
@@ -37,7 +38,7 @@ def get_config(
 def update_config(
     data: schemas.ParrocchiaConfigUpdate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     config = _get_or_create(db)
     for key, value in data.model_dump(exclude_none=True).items():
@@ -51,7 +52,7 @@ def update_config(
 async def upload_logo(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in (".png", ".jpg", ".jpeg"):
@@ -70,7 +71,7 @@ async def upload_logo(
 @router.delete("/logo")
 def delete_logo(
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     config = _get_or_create(db)
     if config.logo_path and os.path.exists(config.logo_path):

@@ -1,67 +1,28 @@
-import os
 import re
-import shutil
 from datetime import datetime
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from app import models
 from app.auth import require_roles
-from app.paths import get_data_dir, get_db_path
+from app.backup_utils import BackupNonSupportato, esegui_backup_completo, get_backup_dir
 
 router = APIRouter(prefix="/backup", tags=["backup"])
 
-# Backups live inside the persistent data dir (backend/ in dev, C:\ReChurch\ when packaged)
-_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
-BACKUP_DIR = get_data_dir() / "backups"
-BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _get_db_path() -> Path:
-    """Return the SQLite DB file path.
-
-    Honors DATABASE_URL when it points to a SQLite file; otherwise falls back
-    to the resolved data-dir path (desktop / packaged app).
-    """
-    db_url = os.getenv("DATABASE_URL")
-    if db_url:
-        if db_url.startswith("sqlite:///"):
-            raw = db_url[len("sqlite:///"):]
-            if os.path.isabs(raw):
-                return Path(raw)
-            return (_BACKEND_DIR / raw).resolve()
-        # Non-SQLite: nothing to backup
-        raise HTTPException(status_code=400, detail="Backup supportato solo per database SQLite")
-    return get_db_path()
+BACKUP_DIR = get_backup_dir()
 
 
 @router.post("/esegui")
 def esegui_backup(
     _: models.Utente = Depends(require_roles("admin")),
 ):
-    db_path = _get_db_path()
-    if not db_path.exists():
-        raise HTTPException(status_code=404, detail=f"Database non trovato: {db_path}")
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"rechurch_{timestamp}.db"
-    dest = BACKUP_DIR / filename
-    shutil.copy2(str(db_path), str(dest))
-
-    result = {"filename": filename, "size_kb": round(dest.stat().st_size / 1024, 2)}
-
-    # Upload cloud opzionale (Google Drive / Dropbox); no-op se non configurato.
-    from app.cloud_backup import cloud_backup_enabled, provider_name, upload_backup
-    if cloud_backup_enabled():
-        try:
-            remote_id = upload_backup(dest)
-            result["cloud"] = {"provider": provider_name(), "ok": True, "id": remote_id}
-        except Exception as e:
-            result["cloud"] = {"provider": provider_name(), "ok": False, "error": str(e)}
-
-    return result
+    try:
+        return esegui_backup_completo()
+    except BackupNonSupportato as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("/lista")

@@ -146,6 +146,11 @@ rimuovi le variabili e disattiva/ricrea il database, oppure cambia l'email.
 | `RECHURCH_DESKTOP` | `1` = nessun login (modalità desktop) | non impostato |
 | `AUTH_DISABLED` | `1` = nessun login (come sopra) | non impostato |
 | `PORT` | Porta di ascolto (impostata dall'host) | 8000 |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Primo amministratore creato su DB vuoto | `admin@parrocchia.it` / `admin123` |
+| `PARROCCHIA_NOME` | Nome della parrocchia (e della chiesa parrocchiale) al primo avvio | — |
+| `BACKUP_HOUR` / `BACKUP_MINUTE` | Orario del backup automatico giornaliero | 02:00 |
+| `BACKUP_KEEP_LOCAL` | Backup locali conservati | 60 |
+| `TZ` | Fuso orario (immagine Docker) | `Europe/Rome` |
 | `CLOUD_BACKUP_PROVIDER` | `gdrive`/`dropbox`/`none` | `none` |
 | `CLOUD_BACKUP_KEEP` | Backup da conservare nel cloud | 30 |
 
@@ -155,6 +160,9 @@ rimuovi le variabili e disattiva/ricrea il database, oppure cambia l'email.
 ---
 
 ## 4. Self-hosting su VPS con dominio (consigliato per uso serio)
+
+> **Più parrocchie sullo stesso server?** Usa invece [DEPLOY-KIMSUFI.md](DEPLOY-KIMSUFI.md):
+> un container e un database per parrocchia, gestiti con `deploy/rechurch.sh`.
 
 Un VPS ti dà controllo completo, dati sul tuo server e app **sempre accesa** (niente
 "sonno" come sul piano free). Tutto gira in Docker con HTTPS automatico.

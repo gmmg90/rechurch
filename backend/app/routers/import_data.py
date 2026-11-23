@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models
 from app.auth import get_current_user
+from app.permessi import solo_parrocchia
 
 router = APIRouter(prefix="/import", tags=["import"])
 
@@ -142,7 +143,7 @@ async def import_csv(
     file: UploadFile = File(...),
     mapping: str = Form(...),  # JSON string of {field: csv_column}
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     import json
 
@@ -224,7 +225,7 @@ async def import_csv(
 async def preview_csv(
     tipo: str,
     file: UploadFile = File(...),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     """Return first 10 rows and column names of a CSV without importing."""
     content = await file.read()
@@ -251,7 +252,7 @@ async def preview_csv(
 @router.post("/mdb")
 async def upload_mdb(
     file: UploadFile = File(...),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     """Upload an MDB/ACCDB file, detect tables, return table names and sample columns."""
     if not file.filename:
@@ -337,7 +338,7 @@ async def upload_mdb(
 async def confirm_mdb_import(
     payload: Dict[str, Any],
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     """
     payload: {
@@ -434,7 +435,7 @@ async def confirm_mdb_import(
 @router.get("/stats")
 def import_stats(
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    _: models.Utente = Depends(solo_parrocchia),
 ):
     return {
         "battesimi": db.query(models.Battesimo).count(),

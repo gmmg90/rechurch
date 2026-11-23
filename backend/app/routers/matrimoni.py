@@ -6,6 +6,9 @@ from sqlalchemy import or_, extract
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.chiese import applica_chiesa
+from app.permessi import filtra_query, forza_chiesa, verifica_record
+from app.registri import assegna_numero, chiave_registro
 
 router = APIRouter(prefix="/matrimoni", tags=["matrimoni"])
 
@@ -14,13 +17,15 @@ router = APIRouter(prefix="/matrimoni", tags=["matrimoni"])
 def list_matrimoni(
     search: Optional[str] = Query(None),
     anno: Optional[int] = Query(None),
+    chiesa_id: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     response: Response = None,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     q = db.query(models.Matrimonio)
+    q = filtra_query(q, models.Matrimonio, utente)
     if search:
         term = f"%{search}%"
         q = q.filter(
@@ -33,6 +38,8 @@ def list_matrimoni(
                 models.Matrimonio.luogo_matrimonio.ilike(term),
             )
         )
+    if chiesa_id:
+        q = q.filter(models.Matrimonio.chiesa_id == chiesa_id)
     if anno:
         q = q.filter(extract("year", models.Matrimonio.data_matrimonio) == anno)
 
@@ -47,11 +54,12 @@ def list_matrimoni(
 def get_matrimonio(
     matrimonio_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Matrimonio).filter(models.Matrimonio.id == matrimonio_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Matrimonio non trovato")
+    verifica_record(obj, utente, "Matrimonio non trovato")
     return obj
 
 
@@ -59,9 +67,12 @@ def get_matrimonio(
 def create_matrimonio(
     data: schemas.MatrimonioCreate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = models.Matrimonio(**data.model_dump())
+    forza_chiesa(obj, utente)
+    applica_chiesa(db, obj, "luogo_matrimonio")
+    assegna_numero(db, obj)
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -73,13 +84,21 @@ def update_matrimonio(
     matrimonio_id: int,
     data: schemas.MatrimonioUpdate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Matrimonio).filter(models.Matrimonio.id == matrimonio_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Matrimonio non trovato")
+    verifica_record(obj, utente, "Matrimonio non trovato")
+    prima = chiave_registro(obj)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(obj, field, value)
+    forza_chiesa(obj, utente)
+    applica_chiesa(db, obj, "luogo_matrimonio")
+    # Numero di registro: si (ri)assegna/controlla solo se è cambiato qualcosa
+    # del registro, così i dati storici importati restano come sono.
+    if chiave_registro(obj) != prima:
+        assegna_numero(db, obj)
     db.commit()
     db.refresh(obj)
     return obj
@@ -89,11 +108,12 @@ def update_matrimonio(
 def delete_matrimonio(
     matrimonio_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Matrimonio).filter(models.Matrimonio.id == matrimonio_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Matrimonio non trovato")
+    verifica_record(obj, utente, "Matrimonio non trovato")
     db.delete(obj)
     db.commit()
 
@@ -104,7 +124,7 @@ def delete_matrimonio(
 def anniversari_prossimi(
     giorni: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     from datetime import date, timedelta
     today = date.today()

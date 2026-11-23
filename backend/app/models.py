@@ -12,6 +12,8 @@ class Utente(Base):
     email = Column(String(200), unique=True, nullable=False, index=True)
     password_hash = Column(String(500), nullable=False)
     ruolo = Column(String(50), nullable=False, default="lettura")  # admin/segreteria/economo/lettura
+    # Se impostata (e il ruolo non è admin) l'utente vede solo i dati di questa chiesa
+    chiesa_id = Column(Integer, ForeignKey("chiese.id", ondelete="SET NULL"), nullable=True)
     attivo = Column(Boolean, default=True, nullable=False)
     ultimo_accesso = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -35,6 +37,27 @@ class ParrocchiaConfig(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class Chiesa(Base):
+    """Chiesa / luogo di culto della parrocchia. Una parrocchia può averne più di
+    una (chiesa parrocchiale, chiese sussidiarie, rettorie, cappelle...)."""
+    __tablename__ = "chiese"
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(200), nullable=False)
+    indirizzo = Column(String(300), nullable=True)
+    cap = Column(String(10), nullable=True)
+    citta = Column(String(100), nullable=True)
+    provincia = Column(String(50), nullable=True)
+    telefono = Column(String(50), nullable=True)
+    email = Column(String(200), nullable=True)
+    rettore = Column(String(200), nullable=True)  # firma dei certificati della chiesa
+    principale = Column(Boolean, default=False, nullable=False)  # chiesa parrocchiale
+    attiva = Column(Boolean, default=True, nullable=False)
+    ordine = Column(Integer, default=0, nullable=False)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 class Battesimo(Base):
     __tablename__ = "battesimi"
 
@@ -45,6 +68,7 @@ class Battesimo(Base):
     luogo_nascita = Column(String(200), nullable=True)
     data_battesimo = Column(Date, nullable=False)
     luogo_battesimo = Column(String(200), nullable=False)
+    chiesa_id = Column(Integer, ForeignKey("chiese.id", ondelete="SET NULL"), nullable=True, index=True)
     padre_nome = Column(String(200), nullable=True)
     madre_nome = Column(String(200), nullable=True)
     padrino_nome = Column(String(200), nullable=True)
@@ -67,6 +91,7 @@ class Cresima(Base):
     luogo_nascita = Column(String(200), nullable=True)
     data_cresima = Column(Date, nullable=False)
     luogo_cresima = Column(String(200), nullable=False)
+    chiesa_id = Column(Integer, ForeignKey("chiese.id", ondelete="SET NULL"), nullable=True, index=True)
     padre_nome = Column(String(200), nullable=True)
     madre_nome = Column(String(200), nullable=True)
     padrino_nome = Column(String(200), nullable=True)
@@ -90,6 +115,7 @@ class Comunione(Base):
     luogo_nascita = Column(String(200), nullable=True)
     data_comunione = Column(Date, nullable=False)
     luogo_comunione = Column(String(200), nullable=True)
+    chiesa_id = Column(Integer, ForeignKey("chiese.id", ondelete="SET NULL"), nullable=True, index=True)
     padre_nome = Column(String(200), nullable=True)
     madre_nome = Column(String(200), nullable=True)
     ministro = Column(String(200), nullable=True)
@@ -114,6 +140,7 @@ class Matrimonio(Base):
     sposa_data_nascita = Column(Date, nullable=True)
     data_matrimonio = Column(Date, nullable=False)
     luogo_matrimonio = Column(String(200), nullable=False)
+    chiesa_id = Column(Integer, ForeignKey("chiese.id", ondelete="SET NULL"), nullable=True, index=True)
     testimone1_nome = Column(String(200), nullable=True)
     testimone2_nome = Column(String(200), nullable=True)
     testimone3_nome = Column(String(200), nullable=True)
@@ -201,6 +228,7 @@ class MovimentoContabile(Base):
     descrizione = Column(String(500), nullable=False)
     categoria_id = Column(Integer, ForeignKey("categorie_contabili.id"), nullable=True)
     fornitore_id = Column(Integer, ForeignKey("fornitori.id"), nullable=True)
+    chiesa_id = Column(Integer, ForeignKey("chiese.id", ondelete="SET NULL"), nullable=True, index=True)
     numero_documento = Column(String(50), nullable=True)
     metodo_pagamento = Column(String(50), nullable=True)  # contanti | bonifico | carta | assegno
     note = Column(Text, nullable=True)
@@ -228,6 +256,7 @@ class Evento(Base):
     data_fine = Column(DateTime(timezone=True), nullable=True)
     tutto_il_giorno = Column(Boolean, default=False, nullable=False)
     luogo = Column(String(300), nullable=True)
+    chiesa_id = Column(Integer, ForeignKey("chiese.id", ondelete="SET NULL"), nullable=True, index=True)
     categoria_id = Column(Integer, ForeignKey("categorie_eventi.id"), nullable=True)
     ricorrenza = Column(String(20), nullable=True)  # None | 'giornaliera' | 'settimanale' | 'mensile' | 'annuale'
     ricorrenza_fine = Column(Date, nullable=True)

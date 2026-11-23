@@ -14,7 +14,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.database import engine, Base, SessionLocal
 from app import models
 from app.auth import hash_password
-from app.paths import get_uploads_dir, get_static_dir, get_db_path
+from app.paths import get_uploads_dir, get_static_dir
 from app.routers import battesimi, cresime, matrimoni, comunioni, import_data, stats
 from app.routers import config as config_router
 from app.routers import pdf as pdf_router
@@ -25,6 +25,8 @@ from app.routers import contabilita as contabilita_router
 from app.routers import scadenziario as scadenziario_router
 from app.routers import report_templates as report_templates_router
 from app.routers import verifiche as verifiche_router
+from app.routers import chiese as chiese_router
+from app.migrations import aggiungi_colonne_mancanti
 
 app = FastAPI(
     title="ReChurch API",
@@ -45,8 +47,8 @@ app.add_middleware(
 )
 
 # ── Routers ───────────────────────────────────────────────────────────────────
-# Registered twice: bare (dev — the Vite proxy strips the /api prefix) and under
-# /api (production — the packaged app serves the SPA on / and the API on /api).
+# Tutta l'API sta sotto /api; il resto degli indirizzi appartiene all'app web
+# (es. /battesimi/nuovo deve aprire la pagina, anche da link diretto o ricarica).
 _ROUTERS = [
     auth_router.router,
     backup_router.router,
@@ -63,60 +65,67 @@ _ROUTERS = [
     scadenziario_router.router,
     report_templates_router.router,
     verifiche_router.router,
+    chiese_router.router,
 ]
 
 API = "/api"
 for r in _ROUTERS:
-    app.include_router(r)          # bare, e.g. /battesimi
-    app.include_router(r, prefix=API)  # prefixed, e.g. /api/battesimi
+    app.include_router(r, prefix=API)  # es. /api/battesimi
 
 # ── Static files (uploads) ────────────────────────────────────────────────────
 UPLOAD_DIR = str(get_uploads_dir())
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
-app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads_api")
+
+
+class _PublicUploads(StaticFiles):
+    """Serve pubblicamente solo i file nella radice di uploads/ (il logo).
+    Le sottocartelle (es. contabilita/ con ricevute e documenti) restano
+    private: si scaricano dagli endpoint autenticati."""
+
+    def get_path(self, scope):
+        path = super().get_path(scope)
+        if "/" in path.replace("\\", "/").strip("/"):
+            from starlette.exceptions import HTTPException as StarletteHTTPException
+            raise StarletteHTTPException(status_code=404)
+        return path
+
+
+app.mount("/uploads", _PublicUploads(directory=UPLOAD_DIR), name="uploads")
+app.mount("/api/uploads", _PublicUploads(directory=UPLOAD_DIR), name="uploads_api")
 
 
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 def _run_scheduled_backup():
-    """Scheduled backup job — runs daily at 02:00."""
-    import shutil
-    from datetime import datetime
-    from pathlib import Path
-
-    db_url = os.getenv("DATABASE_URL")
-    if db_url:
-        if not db_url.startswith("sqlite:///"):
-            return
-        raw = db_url[len("sqlite:///"):]
-        db_path = Path(raw) if os.path.isabs(raw) else (Path(__file__).resolve().parent.parent / raw).resolve()
-    else:
-        db_path = get_db_path()
-
-    if not db_path.exists():
-        print(f"[backup] Database non trovato: {db_path}")
-        return
-
-    from app.paths import get_data_dir
-    backup_dir = get_data_dir() / "backups"
-    backup_dir.mkdir(parents=True, exist_ok=True)
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"rechurch_{timestamp}.db"
-    dest = backup_dir / filename
-    shutil.copy2(str(db_path), str(dest))
-    print(f"[backup] Backup automatico creato: {filename}")
-
-    # Optional cloud upload (see app.cloud_backup); no-op if not configured.
+    """Backup automatico giornaliero (orario: BACKUP_HOUR:BACKUP_MINUTE, default 02:00)."""
+    from app.backup_utils import BackupNonSupportato, esegui_backup_completo
     try:
-        from app.cloud_backup import upload_backup
-        upload_backup(dest)
-    except Exception as e:  # never let cloud errors break the local backup
-        print(f"[backup] Upload cloud saltato/fallito: {e}")
+        result = esegui_backup_completo()
+    except BackupNonSupportato:
+        return  # Postgres: si usa pg_dump lato server
+    except Exception as e:
+        print(f"[backup] Backup automatico fallito: {e}")
+        return
+    print(f"[backup] Backup automatico creato: {result['filename']}")
+    cloud = result.get("cloud")
+    if cloud and not cloud.get("ok"):
+        print(f"[backup] Upload cloud fallito: {cloud.get('error')}")
 
 
-_scheduler = BackgroundScheduler()
-_scheduler.add_job(_run_scheduled_backup, "cron", hour=2, minute=0)
+def _env_int(name: str, default: int, lo: int, hi: int) -> int:
+    try:
+        v = int(os.getenv(name, default))
+    except ValueError:
+        return default
+    return v if lo <= v <= hi else default
+
+
+# Con più parrocchie sullo stesso server ogni istanza riceve un minuto diverso,
+# così i backup non partono tutti insieme.
+BACKUP_HOUR = _env_int("BACKUP_HOUR", 2, 0, 23)
+BACKUP_MINUTE = _env_int("BACKUP_MINUTE", 0, 0, 59)
+
+_scheduler = BackgroundScheduler(timezone=os.getenv("TZ") or None)
+_scheduler.add_job(_run_scheduled_backup, "cron", hour=BACKUP_HOUR, minute=BACKUP_MINUTE)
 
 
 # ── Default module list ───────────────────────────────────────────────────────
@@ -139,26 +148,62 @@ _MODULI_DEFAULT = [
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    # Allinea i DB già esistenti (es. di parrocchie create con versioni
+    # precedenti) aggiungendo le colonne nuove.
+    aggiungi_colonne_mancanti(engine)
 
     db = SessionLocal()
     try:
-        # Create default admin user if no users exist
+        # Primo avvio: crea l'amministratore della parrocchia. Sul server le
+        # credenziali arrivano da ADMIN_EMAIL / ADMIN_PASSWORD (generate dallo
+        # script di provisioning); in locale resta il classico admin123.
         if db.query(models.Utente).count() == 0:
-            admin = models.Utente(
-                nome="Admin",
-                cognome="Parrocchia",
-                email="admin@parrocchia.it",
-                password_hash=hash_password("admin123"),
+            admin_email = (os.getenv("ADMIN_EMAIL") or "admin@parrocchia.it").strip()
+            admin_pw = os.getenv("ADMIN_PASSWORD") or "admin123"
+            db.add(models.Utente(
+                nome=os.getenv("ADMIN_NOME", "Admin"),
+                cognome=os.getenv("ADMIN_COGNOME", "Parrocchia"),
+                email=admin_email,
+                password_hash=hash_password(admin_pw),
                 ruolo="admin",
                 attivo=True,
-            )
-            db.add(admin)
+            ))
             db.commit()
-            print(
-                "\n"
-                "⚠️  Nessun utente trovato. Creato utente admin: "
-                "admin@parrocchia.it / admin123 — CAMBIA LA PASSWORD!\n"
+            if os.getenv("ADMIN_PASSWORD"):
+                print(f"[avvio] Creato utente amministratore {admin_email}")
+            else:
+                print(
+                    "\n"
+                    f"⚠️  Nessun utente trovato. Creato utente admin: "
+                    f"{admin_email} / admin123 — CAMBIA LA PASSWORD!\n"
+                )
+
+        # Primo avvio: dati della parrocchia da variabili d'ambiente (provisioning)
+        nome_parrocchia = (os.getenv("PARROCCHIA_NOME") or "").strip()
+        if nome_parrocchia and db.query(models.ParrocchiaConfig).count() == 0:
+            db.add(models.ParrocchiaConfig(
+                id=1,
+                nome=nome_parrocchia,
+                diocesi=os.getenv("PARROCCHIA_DIOCESI") or None,
+                citta=os.getenv("PARROCCHIA_CITTA") or None,
+            ))
+            db.commit()
+
+        # Primo avvio: la chiesa parrocchiale. Le altre chiese (sussidiarie,
+        # rettorie, cappelle) si aggiungono da Impostazioni.
+        if db.query(models.Chiesa).count() == 0:
+            cfg = db.query(models.ParrocchiaConfig).first()
+            nome_chiesa = (os.getenv("CHIESA_PRINCIPALE") or "").strip() or (
+                cfg.nome if cfg and cfg.nome and cfg.nome != "Parrocchia" else ""
             )
+            if nome_chiesa:
+                db.add(models.Chiesa(
+                    nome=nome_chiesa,
+                    indirizzo=cfg.indirizzo if cfg else None,
+                    citta=cfg.citta if cfg else None,
+                    principale=True,
+                ))
+                db.commit()
 
         # Seed moduli (idempotent — only adds missing ones)
         for m in _MODULI_DEFAULT:
@@ -202,7 +247,7 @@ def on_shutdown():
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "parrocchia": os.getenv("RECHURCH_TENANT") or None}
 
 
 # ── Frontend statico (produzione / desktop) ───────────────────────────────────

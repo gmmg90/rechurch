@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Save, Upload, Trash2, Building2, Database, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { configApi, backupApi, type ParrocchiaConfig } from '../api/client'
+import GestioneChiese from '../components/GestioneChiese'
 
 type FormData = Omit<ParrocchiaConfig, 'id' | 'logo_path' | 'updated_at'>
 
@@ -194,6 +195,9 @@ export default function Impostazioni() {
         </div>
       </div>
 
+      {/* Chiese della parrocchia */}
+      <GestioneChiese />
+
       {/* Contatti e firma */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Contatti e firma</h2>
@@ -249,7 +253,7 @@ export default function Impostazioni() {
         <Database className="text-indigo-600" size={22} />
         <div>
           <h2 className="text-lg font-bold text-gray-800">Backup database</h2>
-          <p className="text-gray-500 text-sm">I backup automatici vengono eseguiti ogni notte alle 02:00</p>
+          <p className="text-gray-500 text-sm">I backup automatici vengono eseguiti ogni notte</p>
         </div>
       </div>
 

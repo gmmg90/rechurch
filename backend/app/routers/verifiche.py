@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.auth import get_current_user, require_roles
+from app.permessi import chiesa_utente, solo_parrocchia
 from app.database import get_db
 
 router = APIRouter(prefix="/verifiche", tags=["verifiche"])
@@ -121,21 +122,40 @@ def calcola_problemi(db: Session) -> list[dict]:
     return problemi
 
 
+_MODELLI = {
+    "battesimi": models.Battesimo, "comunioni": models.Comunione,
+    "cresime": models.Cresima, "matrimoni": models.Matrimonio,
+}
+
+
+def problemi_visibili(db: Session, utente) -> list[dict]:
+    """Problemi calcolati, ristretti alla chiesa dell'utente se è limitato."""
+    problemi = calcola_problemi(db)
+    cid = chiesa_utente(utente)
+    if cid is None:
+        return problemi
+    ammessi = {
+        tipo: {i for (i,) in db.query(Model.id).filter(Model.chiesa_id == cid).all()}
+        for tipo, Model in _MODELLI.items()
+    }
+    return [p for p in problemi if p["record_id"] in ammessi.get(p["tipo"], set())]
+
+
 @router.get("/")
 def lista_verifiche(
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
-    problemi = calcola_problemi(db)
+    problemi = problemi_visibili(db, utente)
     return {"totale": len(problemi), "problemi": problemi}
 
 
 @router.get("/conteggio")
 def conteggio_verifiche(
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
-    return {"totale": len(calcola_problemi(db))}
+    return {"totale": len(problemi_visibili(db, utente))}
 
 
 class IgnoraRequest(BaseModel):
@@ -146,9 +166,13 @@ class IgnoraRequest(BaseModel):
 def ignora(
     data: IgnoraRequest,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(require_roles("admin", "segreteria")),
+    utente: models.Utente = Depends(require_roles("admin", "segreteria")),
 ):
     """Segna un controllo come 'corretto così' o una segnalazione come risolta."""
+    if chiesa_utente(utente) is not None and data.chiave not in {
+        p["chiave"] for p in problemi_visibili(db, utente)
+    }:
+        raise HTTPException(404, "Controllo non trovato")
     if data.chiave.startswith("seg:"):
         s = db.query(models.Segnalazione).filter(models.Segnalazione.id == int(data.chiave[4:])).first()
         if not s:
@@ -173,8 +197,14 @@ class SegnalazioneCreate(BaseModel):
 def crea_segnalazione(
     data: SegnalazioneCreate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(require_roles("admin", "segreteria")),
+    utente: models.Utente = Depends(require_roles("admin", "segreteria")),
 ):
+    cid = chiesa_utente(utente)
+    if cid is not None:
+        Model = _MODELLI.get(data.tipo)
+        rec = db.get(Model, data.record_id) if Model and data.record_id else None
+        if rec is None or rec.chiesa_id != cid:
+            raise HTTPException(403, "Puoi segnalare solo record della tua chiesa")
     s = models.Segnalazione(**data.model_dump())
     db.add(s)
     db.commit()

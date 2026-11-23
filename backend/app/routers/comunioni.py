@@ -6,6 +6,9 @@ from sqlalchemy import or_, extract
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.chiese import applica_chiesa
+from app.permessi import filtra_query, forza_chiesa, verifica_record
+from app.registri import assegna_numero, chiave_registro
 
 router = APIRouter(prefix="/comunioni", tags=["comunioni"])
 
@@ -14,13 +17,15 @@ router = APIRouter(prefix="/comunioni", tags=["comunioni"])
 def list_comunioni(
     search: Optional[str] = Query(None),
     anno: Optional[int] = Query(None),
+    chiesa_id: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     response: Response = None,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     q = db.query(models.Comunione)
+    q = filtra_query(q, models.Comunione, utente)
     if search:
         term = f"%{search}%"
         q = q.filter(
@@ -31,6 +36,8 @@ def list_comunioni(
                 models.Comunione.luogo_comunione.ilike(term),
             )
         )
+    if chiesa_id:
+        q = q.filter(models.Comunione.chiesa_id == chiesa_id)
     if anno:
         q = q.filter(extract("year", models.Comunione.data_comunione) == anno)
 
@@ -45,11 +52,12 @@ def list_comunioni(
 def get_comunione(
     comunione_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Comunione).filter(models.Comunione.id == comunione_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Comunione non trovata")
+    verifica_record(obj, utente, "Comunione non trovata")
     return obj
 
 
@@ -57,9 +65,12 @@ def get_comunione(
 def create_comunione(
     data: schemas.ComunioneCreate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = models.Comunione(**data.model_dump())
+    forza_chiesa(obj, utente)
+    applica_chiesa(db, obj, "luogo_comunione")
+    assegna_numero(db, obj)
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -71,13 +82,21 @@ def update_comunione(
     comunione_id: int,
     data: schemas.ComunioneUpdate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Comunione).filter(models.Comunione.id == comunione_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Comunione non trovata")
+    verifica_record(obj, utente, "Comunione non trovata")
+    prima = chiave_registro(obj)
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(obj, field, value)
+    forza_chiesa(obj, utente)
+    applica_chiesa(db, obj, "luogo_comunione")
+    # Numero di registro: si (ri)assegna/controlla solo se è cambiato qualcosa
+    # del registro, così i dati storici importati restano come sono.
+    if chiave_registro(obj) != prima:
+        assegna_numero(db, obj)
     db.commit()
     db.refresh(obj)
     return obj
@@ -87,10 +106,11 @@ def update_comunione(
 def delete_comunione(
     comunione_id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.Comunione).filter(models.Comunione.id == comunione_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Comunione non trovata")
+    verifica_record(obj, utente, "Comunione non trovata")
     db.delete(obj)
     db.commit()

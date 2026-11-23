@@ -3,6 +3,8 @@ import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { X } from 'lucide-react'
 import { scadenziarioApi, type Evento, type CategoriaEvento } from '../../api/client'
+import { useChiese } from '../../components/ChiesaSelect'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface Props {
   evento: Evento | null
@@ -30,6 +32,8 @@ function toLocalDatetimeInput(iso?: string | null): string {
 
 export default function EventoModal({ evento, defaultStart, categorie, onClose, onSaved }: Props) {
   const isEdit = !!evento
+  const { data: chiese = [] } = useChiese()
+  const { chiesaUtente } = useAuth()
 
   const [form, setForm] = useState({
     titolo: '',
@@ -38,6 +42,7 @@ export default function EventoModal({ evento, defaultStart, categorie, onClose, 
     data_fine: '',
     tutto_il_giorno: false,
     luogo: '',
+    chiesa: '',
     categoria_id: '' as string | number,
     ricorrenza: '',
     ricorrenza_fine: '',
@@ -53,6 +58,7 @@ export default function EventoModal({ evento, defaultStart, categorie, onClose, 
         data_fine: toLocalDatetimeInput(evento.data_fine),
         tutto_il_giorno: evento.tutto_il_giorno,
         luogo: evento.luogo || '',
+        chiesa: evento.chiesa_id ? String(evento.chiesa_id) : '',
         categoria_id: evento.categoria_id ?? '',
         ricorrenza: evento.ricorrenza || '',
         ricorrenza_fine: evento.ricorrenza_fine || '',
@@ -87,6 +93,8 @@ export default function EventoModal({ evento, defaultStart, categorie, onClose, 
       data_fine: form.data_fine ? new Date(form.data_fine).toISOString() : undefined,
       tutto_il_giorno: form.tutto_il_giorno,
       luogo: form.luogo || undefined,
+      // null = evento di tutta la parrocchia
+      chiesa_id: form.chiesa ? Number(form.chiesa) : null,
       categoria_id: form.categoria_id ? Number(form.categoria_id) : undefined,
       ricorrenza: form.ricorrenza || undefined,
       ricorrenza_fine: form.ricorrenza_fine || undefined,
@@ -149,6 +157,25 @@ export default function EventoModal({ evento, defaultStart, categorie, onClose, 
               />
             </div>
           </div>
+
+          {chiese.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Chiesa</label>
+              <select
+                value={chiesaUtente !== null ? String(chiesaUtente) : form.chiesa}
+                disabled={chiesaUtente !== null}
+                onChange={e => {
+                  const v = e.target.value
+                  const nome = chiese.find(c => String(c.id) === v)?.nome
+                  setForm(f => ({ ...f, chiesa: v, luogo: nome && !f.luogo ? nome : f.luogo }))
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white disabled:bg-gray-50"
+              >
+                {chiesaUtente === null && <option value="">Tutta la parrocchia</option>}
+                {chiese.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Luogo</label>

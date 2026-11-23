@@ -25,6 +25,8 @@ from sqlalchemy import or_, extract
 
 from app.database import get_db
 from app import models
+from app.auth import get_current_user
+from app.permessi import filtra_query, verifica_record
 from app.templates_default import DEFAULT_TEMPLATES
 
 router = APIRouter(prefix="/pdf", tags=["pdf"])
@@ -97,7 +99,11 @@ def _build_pdf(title: str, body_parts: list[str], config: models.ParrocchiaConfi
     # ── Intestazione ──────────────────────────────────────────────────────────
     logo_ok = config.logo_path and os.path.exists(config.logo_path)
     header_text = []
-    header_text.append(Paragraph(config.nome or "Parrocchia", s["nome"]))
+    if getattr(config, "chiesa", None):
+        header_text.append(Paragraph(config.chiesa, s["nome"]))
+        header_text.append(Paragraph(config.nome or "Parrocchia", s["sub"]))
+    else:
+        header_text.append(Paragraph(config.nome or "Parrocchia", s["nome"]))
     if config.diocesi:
         header_text.append(Paragraph(f"Diocesi di {config.diocesi}", s["sub"]))
     if config.indirizzo:
@@ -144,7 +150,7 @@ def _build_pdf(title: str, body_parts: list[str], config: models.ParrocchiaConfi
 
     sig_rows = [
         [Paragraph(f"{city}, {oggi}", s["sig_l"]),
-         Paragraph(firma_label, s["sig_r"])],
+         Paragraph(_firma_label(config, firma_label), s["sig_r"])],
         ["",
          Paragraph("_______________________", s["sig_r"])],
     ]
@@ -174,6 +180,49 @@ def _get_config(db: Session) -> models.ParrocchiaConfig:
     return config
 
 
+_CAMPI_CHIESA = ("indirizzo", "cap", "citta", "provincia", "telefono", "email")
+
+
+def _intestazione(db: Session, record=None):
+    """Dati per intestazione e firma del certificato.
+
+    Se il sacramento è stato celebrato in una chiesa che non è la parrocchiale,
+    l'intestazione riporta la chiesa (con "Parrocchia ..." sotto), il suo
+    indirizzo e contatti e la firma del rettore; i campi mancanti della chiesa
+    sono presi dalla parrocchia. Altrimenti restano i dati della parrocchia.
+    """
+    from types import SimpleNamespace
+    cfg = _get_config(db)
+    dati = {c.name: getattr(cfg, c.name, None) for c in models.ParrocchiaConfig.__table__.columns}
+    dati.update(chiesa=None, chiesa_principale=None, rettore=None, parrocchia_citta=cfg.citta)
+    chiesa = None
+    cid = getattr(record, "chiesa_id", None) if record is not None else None
+    if cid:
+        chiesa = db.get(models.Chiesa, cid)
+    if chiesa is not None:
+        dati["chiesa_principale"] = chiesa.principale
+        dati["rettore"] = chiesa.rettore
+        if not chiesa.principale:
+            dati["chiesa"] = chiesa.nome
+            for campo in _CAMPI_CHIESA:
+                if getattr(chiesa, campo, None):
+                    dati[campo] = getattr(chiesa, campo)
+            if chiesa.rettore:
+                dati["parroco"] = chiesa.rettore
+        elif chiesa.rettore:
+            dati["parroco"] = chiesa.rettore
+    return SimpleNamespace(**dati)
+
+
+def _firma_label(config, label: str) -> str:
+    """Nelle chiese non parrocchiali con un rettore la firma è del rettore
+    (solo se l'etichetta è quella predefinita)."""
+    if getattr(config, "chiesa", None) and getattr(config, "rettore", None) \
+            and (label or "").strip().lower() == "il parroco":
+        return "IL RETTORE" if label.isupper() else "Il Rettore"
+    return label
+
+
 def _get_template(db: Session, tipo: str) -> dict:
     """Carica il template per il tipo, usando i default se non esiste nel DB."""
     obj = db.query(models.ReportTemplate).filter(models.ReportTemplate.tipo == tipo).first()
@@ -198,8 +247,10 @@ def _build_context(record, config: models.ParrocchiaConfig, tipo: str) -> dict:
     """Costruisce il dizionario dei segnaposti per il rendering del template."""
     ctx = {
         "parrocchia_nome": config.nome or "_______",
-        "parrocchia_citta": config.citta or "_______",
+        "parrocchia_citta": getattr(config, "parrocchia_citta", None) or config.citta or "_______",
         "parroco": config.parroco or "_______",
+        "chiesa_nome": getattr(config, "chiesa", None) or config.nome or "_______",
+        "chiesa_indirizzo": config.indirizzo or "_______",
         "oggi": _fmt(date.today()),
     }
     # Estrae tutti i campi del record, formattando le date
@@ -265,11 +316,13 @@ def pdf_battesimo(
     id: int,
     inline: bool = Query(False, description="Se true, visualizza nel browser; altrimenti scarica"),
     db: Session = Depends(get_db),
+    utente: models.Utente = Depends(get_current_user),
 ):
     r = db.query(models.Battesimo).filter(models.Battesimo.id == id).first()
     if not r:
         raise HTTPException(404, "Battesimo non trovato")
-    cfg = _get_config(db)
+    verifica_record(r, utente, "Battesimo non trovato")
+    cfg = _intestazione(db, r)
 
     pdf = _render_template_pdf(r, cfg, "battesimi")
     fname = f"battesimo_{r.cognome}_{r.nome}_{id}.pdf"
@@ -283,11 +336,13 @@ def pdf_comunione(
     id: int,
     inline: bool = Query(False),
     db: Session = Depends(get_db),
+    utente: models.Utente = Depends(get_current_user),
 ):
     r = db.query(models.Comunione).filter(models.Comunione.id == id).first()
     if not r:
         raise HTTPException(404, "Comunione non trovata")
-    cfg = _get_config(db)
+    verifica_record(r, utente, "Comunione non trovata")
+    cfg = _intestazione(db, r)
 
     pdf = _render_template_pdf(r, cfg, "comunioni")
     fname = f"comunione_{r.cognome}_{r.nome}_{id}.pdf"
@@ -301,11 +356,13 @@ def pdf_cresima(
     id: int,
     inline: bool = Query(False),
     db: Session = Depends(get_db),
+    utente: models.Utente = Depends(get_current_user),
 ):
     r = db.query(models.Cresima).filter(models.Cresima.id == id).first()
     if not r:
         raise HTTPException(404, "Cresima non trovata")
-    cfg = _get_config(db)
+    verifica_record(r, utente, "Cresima non trovata")
+    cfg = _intestazione(db, r)
 
     pdf = _render_template_pdf(r, cfg, "cresime")
     fname = f"cresima_{r.cognome}_{r.nome}_{id}.pdf"
@@ -373,8 +430,10 @@ def _build_pdf_matrimonio(r: models.Matrimonio, config: models.ParrocchiaConfig,
                     else (str(getattr(r, c.name)) if getattr(r, c.name, None) is not None else "_______"))
            for c in r.__table__.columns},
         "parrocchia_nome": config.nome or "_______",
-        "parrocchia_citta": config.citta or "_______",
+        "parrocchia_citta": getattr(config, "parrocchia_citta", None) or config.citta or "_______",
         "parroco": config.parroco or "Parroco",
+        "chiesa_nome": getattr(config, "chiesa", None) or config.nome or "_______",
+        "chiesa_indirizzo": config.indirizzo or "_______",
         "oggi": _fmt(date.today()),
     })
 
@@ -391,7 +450,12 @@ def _build_pdf_matrimonio(r: models.Matrimonio, config: models.ParrocchiaConfig,
         story.append(Spacer(1, 0.2 * cm))
 
     # Parrocchia
-    story.append(Paragraph(f"Parrocchia {config.nome or ''}", styles["parrocchia"]))
+    nome_parr = (config.nome or "").strip()
+    if not nome_parr.lower().startswith("parrocchia"):
+        nome_parr = f"Parrocchia {nome_parr}"
+    story.append(Paragraph(nome_parr, styles["parrocchia"]))
+    if getattr(config, "chiesa", None):
+        story.append(Paragraph(config.chiesa, styles["header_it"]))
     story.append(Spacer(1, 0.1 * cm))
     story.append(HRFlowable(width="100%", thickness=0.8, color=colors.black))
 
@@ -482,7 +546,7 @@ def _build_pdf_matrimonio(r: models.Matrimonio, config: models.ParrocchiaConfig,
     # Firma: città lì data + label firma personalizzabile
     citta = config.citta or "___________"
     oggi_short = _fmt_short(date.today())
-    firma_label = tpl.get("firma_label") or "IL PARROCO"
+    firma_label = _firma_label(config, tpl.get("firma_label") or "IL PARROCO")
     firma_tbl = Table(
         [[
             Paragraph(f"{citta}, lì {oggi_short}", styles["firma_left"]),
@@ -503,11 +567,13 @@ def pdf_matrimonio(
     id: int,
     inline: bool = Query(False),
     db: Session = Depends(get_db),
+    utente: models.Utente = Depends(get_current_user),
 ):
     r = db.query(models.Matrimonio).filter(models.Matrimonio.id == id).first()
     if not r:
         raise HTTPException(404, "Matrimonio non trovato")
-    cfg = _get_config(db)
+    verifica_record(r, utente, "Matrimonio non trovato")
+    cfg = _intestazione(db, r)
 
     tpl = _get_template(db, "matrimoni")
     pdf = _build_pdf_matrimonio(r, cfg, tpl)
@@ -522,6 +588,7 @@ def pdf_preview_template(
     tipo: str,
     inline: bool = Query(True),
     db: Session = Depends(get_db),
+    _: models.Utente = Depends(get_current_user),
 ):
     """Genera un'anteprima del template con un record d'esempio (per il report builder)."""
     if tipo not in ("battesimi", "comunioni", "cresime", "matrimoni"):
@@ -679,7 +746,8 @@ _ELENCO_CONFIG = {
 }
 
 
-def _build_pdf_elenco(items, tipo: str, search: str, anno: int | None, config: models.ParrocchiaConfig) -> BytesIO:
+def _build_pdf_elenco(items, tipo: str, search: str, anno: int | None, config: models.ParrocchiaConfig,
+                      chiesa: str | None = None) -> BytesIO:
     cfg_t = _ELENCO_CONFIG[tipo]
     columns = cfg_t["columns"]
     title = cfg_t["title"]
@@ -711,6 +779,8 @@ def _build_pdf_elenco(items, tipo: str, search: str, anno: int | None, config: m
         filtri_parts.append(f"Ricerca: <b>{search}</b>")
     if anno:
         filtri_parts.append(f"Anno: <b>{anno}</b>")
+    if chiesa:
+        filtri_parts.append(f"Chiesa: <b>{chiesa}</b>")
     filtri_parts.append(f"Totale: <b>{len(items)}</b> record")
     story.append(Paragraph(" — ".join(filtri_parts), ParagraphStyle(
         "Filtri", fontSize=9, fontName="Helvetica-Oblique",
@@ -764,8 +834,10 @@ def pdf_elenco(
     tipo: str,
     search: str = Query("", description="Ricerca testuale"),
     anno: int | None = Query(None, description="Filtra per anno"),
+    chiesa_id: int | None = Query(None, description="Filtra per chiesa"),
     inline: bool = Query(False),
     db: Session = Depends(get_db),
+    utente: models.Utente = Depends(get_current_user),
 ):
     if tipo not in _ELENCO_CONFIG:
         raise HTTPException(400, "Tipo non valido")
@@ -774,7 +846,9 @@ def pdf_elenco(
     Model = getattr(models, cfg_t["model_attr"])
     data_col = getattr(Model, cfg_t["data_col_attr"])
 
-    q = db.query(Model)
+    q = filtra_query(db.query(Model), Model, utente)
+    if chiesa_id:
+        q = q.filter(Model.chiesa_id == chiesa_id)
     if search:
         term = f"%{search}%"
         conditions = [getattr(Model, f).ilike(term) for f in cfg_t["search_fields"]]
@@ -785,6 +859,7 @@ def pdf_elenco(
     items = q.order_by(data_col.desc()).all()
 
     config = _get_config(db)
-    pdf = _build_pdf_elenco(items, tipo, search, anno, config)
+    chiesa = db.get(models.Chiesa, chiesa_id) if chiesa_id else None
+    pdf = _build_pdf_elenco(items, tipo, search, anno, config, chiesa.nome if chiesa else None)
     fname = f"elenco_{tipo}.pdf"
     return _pdf_response(pdf, fname, inline)

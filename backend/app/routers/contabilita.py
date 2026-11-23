@@ -28,8 +28,46 @@ MAX_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.chiese import applica_chiesa
+from app.permessi import chiesa_utente, forza_chiesa, verifica_record
 
 router = APIRouter(prefix="/contabilita", tags=["contabilita"])
+
+M = models.MovimentoContabile
+CASSA_PARROCCHIA = "Cassa parrocchia"
+
+
+def _filtra_cassa(q, utente, chiesa_id: Optional[int] = None, cassa: Optional[str] = None):
+    """Ogni movimento è di una chiesa (chiesa_id) o della parrocchia (chiesa_id
+    vuoto). ``cassa`` vale "parrocchia" oppure l'id di una chiesa; un utente
+    limitato vede sempre e solo la cassa della sua chiesa."""
+    cid = chiesa_utente(utente)
+    if cid is not None:
+        return q.filter(M.chiesa_id == cid)
+    if cassa == "parrocchia":
+        return q.filter(M.chiesa_id.is_(None))
+    if cassa and cassa.isdigit():
+        chiesa_id = int(cassa)
+    if chiesa_id:
+        q = q.filter(M.chiesa_id == chiesa_id)
+    return q
+
+
+def _nomi_chiese(db: Session) -> dict:
+    return {c.id: c.nome for c in db.query(models.Chiesa).all()}
+
+
+def _hydrate(db: Session, m, chiese: Optional[dict] = None) -> schemas.MovimentoContabileResponse:
+    d = schemas.MovimentoContabileResponse.model_validate(m)
+    if m.categoria_id:
+        cat = db.query(models.CategoriaContabile).filter(models.CategoriaContabile.id == m.categoria_id).first()
+        d.categoria_nome = cat.nome if cat else None
+    if m.fornitore_id:
+        forn = db.query(models.Fornitore).filter(models.Fornitore.id == m.fornitore_id).first()
+        d.fornitore_nome = forn.nome if forn else None
+    chiese = chiese if chiese is not None else _nomi_chiese(db)
+    d.chiesa_nome = chiese.get(m.chiesa_id) if m.chiesa_id else CASSA_PARROCCHIA
+    return d
 
 
 # ─── Categorie ───────────────────────────────────────────────────────────────
@@ -158,14 +196,16 @@ def list_movimenti(
     tipo: Optional[str] = None,
     categoria_id: Optional[int] = None,
     fornitore_id: Optional[int] = None,
+    chiesa_id: Optional[int] = None,
+    cassa: Optional[str] = None,
     dal: Optional[date] = None,
     al: Optional[date] = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
-    q = db.query(models.MovimentoContabile)
+    q = _filtra_cassa(db.query(models.MovimentoContabile), utente, chiesa_id, cassa)
     if search:
         like = f"%{search}%"
         q = q.filter(or_(
@@ -184,51 +224,36 @@ def list_movimenti(
         q = q.filter(models.MovimentoContabile.data <= al)
 
     movimenti = q.order_by(models.MovimentoContabile.data.desc()).offset(skip).limit(limit).all()
-
-    # Hydrate categoria_nome and fornitore_nome
-    result = []
-    for m in movimenti:
-        d = schemas.MovimentoContabileResponse.model_validate(m)
-        if m.categoria_id:
-            cat = db.query(models.CategoriaContabile).filter(models.CategoriaContabile.id == m.categoria_id).first()
-            d.categoria_nome = cat.nome if cat else None
-        if m.fornitore_id:
-            forn = db.query(models.Fornitore).filter(models.Fornitore.id == m.fornitore_id).first()
-            d.fornitore_nome = forn.nome if forn else None
-        result.append(d)
-    return result
+    chiese = _nomi_chiese(db)
+    return [_hydrate(db, m, chiese) for m in movimenti]
 
 
 @router.post("/movimenti/", response_model=schemas.MovimentoContabileResponse, status_code=201)
 def create_movimento(
     data: schemas.MovimentoContabileCreate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = models.MovimentoContabile(**data.model_dump())
+    forza_chiesa(obj, utente)
+    applica_chiesa(db, obj)
     db.add(obj)
     db.commit()
     db.refresh(obj)
-    return schemas.MovimentoContabileResponse.model_validate(obj)
+    return _hydrate(db, obj)
 
 
 @router.get("/movimenti/{id}", response_model=schemas.MovimentoContabileResponse)
 def get_movimento(
     id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     m = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
     if not m:
         raise HTTPException(404, "Movimento non trovato")
-    d = schemas.MovimentoContabileResponse.model_validate(m)
-    if m.categoria_id:
-        cat = db.query(models.CategoriaContabile).filter(models.CategoriaContabile.id == m.categoria_id).first()
-        d.categoria_nome = cat.nome if cat else None
-    if m.fornitore_id:
-        forn = db.query(models.Fornitore).filter(models.Fornitore.id == m.fornitore_id).first()
-        d.fornitore_nome = forn.nome if forn else None
-    return d
+    verifica_record(m, utente, "Movimento non trovato")
+    return _hydrate(db, m)
 
 
 @router.put("/movimenti/{id}", response_model=schemas.MovimentoContabileResponse)
@@ -236,27 +261,31 @@ def update_movimento(
     id: int,
     data: schemas.MovimentoContabileUpdate,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
     if not obj:
         raise HTTPException(404, "Movimento non trovato")
+    verifica_record(obj, utente, "Movimento non trovato")
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(obj, k, v)
+    forza_chiesa(obj, utente)
+    applica_chiesa(db, obj)
     db.commit()
     db.refresh(obj)
-    return schemas.MovimentoContabileResponse.model_validate(obj)
+    return _hydrate(db, obj)
 
 
 @router.delete("/movimenti/{id}", status_code=204)
 def delete_movimento(
     id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
     if not obj:
         raise HTTPException(404, "Movimento non trovato")
+    verifica_record(obj, utente, "Movimento non trovato")
     if obj.allegato_path and os.path.exists(obj.allegato_path):
         os.remove(obj.allegato_path)
     db.delete(obj)
@@ -270,11 +299,12 @@ async def upload_allegato(
     id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
     if not obj:
         raise HTTPException(404, "Movimento non trovato")
+    verifica_record(obj, utente, "Movimento non trovato")
 
     if file.content_type not in ALLOWED_MIME:
         raise HTTPException(400, f"Tipo file non supportato: {file.content_type}")
@@ -297,18 +327,19 @@ async def upload_allegato(
     obj.allegato_nome = file.filename
     db.commit()
     db.refresh(obj)
-    return schemas.MovimentoContabileResponse.model_validate(obj)
+    return _hydrate(db, obj)
 
 
 @router.get("/movimenti/{id}/allegato")
 def download_allegato(
     id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
     if not obj or not obj.allegato_path:
         raise HTTPException(404, "Allegato non trovato")
+    verifica_record(obj, utente, "Allegato non trovato")
     if not os.path.exists(obj.allegato_path):
         raise HTTPException(404, "File non trovato sul disco")
     return FileResponse(
@@ -321,11 +352,12 @@ def download_allegato(
 def delete_allegato(
     id: int,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     obj = db.query(models.MovimentoContabile).filter(models.MovimentoContabile.id == id).first()
     if not obj:
         raise HTTPException(404, "Movimento non trovato")
+    verifica_record(obj, utente, "Movimento non trovato")
     if obj.allegato_path and os.path.exists(obj.allegato_path):
         os.remove(obj.allegato_path)
     obj.allegato_path = None
@@ -339,10 +371,12 @@ def delete_allegato(
 def riepilogo(
     dal: Optional[date] = None,
     al: Optional[date] = None,
+    chiesa_id: Optional[int] = None,
+    cassa: Optional[str] = None,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
-    q = db.query(models.MovimentoContabile)
+    q = _filtra_cassa(db.query(models.MovimentoContabile), utente, chiesa_id, cassa)
     if dal:
         q = q.filter(models.MovimentoContabile.data >= dal)
     if al:
@@ -368,7 +402,25 @@ def riepilogo(
             }
         cat_totali[key]["totale"] += float(m.importo)
 
+    # Per cassa (chiese + parrocchia)
+    nomi = _nomi_chiese(db)
+    casse: dict = {}
+    for m in movimenti:
+        c = casse.setdefault(m.chiesa_id, {
+            "chiesa_id": m.chiesa_id,
+            "cassa": nomi.get(m.chiesa_id, "Chiesa eliminata") if m.chiesa_id else CASSA_PARROCCHIA,
+            "entrate": 0.0, "uscite": 0.0,
+        })
+        c["entrate" if m.tipo == "entrata" else "uscite"] += float(m.importo)
+    per_cassa = []
+    for c in casse.values():
+        c["entrate"], c["uscite"] = round(c["entrate"], 2), round(c["uscite"], 2)
+        c["saldo"] = round(c["entrate"] - c["uscite"], 2)
+        per_cassa.append(c)
+    per_cassa.sort(key=lambda c: (c["chiesa_id"] is not None, c["cassa"]))
+
     return {
+        "per_cassa": per_cassa,
         "totale_entrate": round(tot_entrate, 2),
         "totale_uscite": round(tot_uscite, 2),
         "saldo": round(tot_entrate - tot_uscite, 2),
@@ -382,14 +434,16 @@ def riepilogo(
 def export_excel(
     dal: Optional[date] = None,
     al: Optional[date] = None,
+    chiesa_id: Optional[int] = None,
+    cassa: Optional[str] = None,
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
     from openpyxl.utils import get_column_letter
 
-    q = db.query(models.MovimentoContabile)
+    q = _filtra_cassa(db.query(models.MovimentoContabile), utente, chiesa_id, cassa)
     if dal:
         q = q.filter(models.MovimentoContabile.data >= dal)
     if al:
@@ -401,7 +455,8 @@ def export_excel(
     ws.title = "Movimenti"
 
     # Header
-    headers = ["Data", "Tipo", "Descrizione", "Importo (€)", "Categoria", "Fornitore", "N° Documento", "Metodo Pagamento", "Note"]
+    headers = ["Data", "Tipo", "Descrizione", "Importo (€)", "Categoria", "Fornitore", "N° Documento", "Metodo Pagamento", "Note", "Cassa"]
+    nomi_chiese = _nomi_chiese(db)
     header_fill = PatternFill(start_color="1e3a5f", end_color="1e3a5f", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
     for col, h in enumerate(headers, 1):
@@ -429,6 +484,7 @@ def export_excel(
         ws.cell(row=row_idx, column=7, value=m.numero_documento or "")
         ws.cell(row=row_idx, column=8, value=m.metodo_pagamento or "")
         ws.cell(row=row_idx, column=9, value=m.note or "")
+        ws.cell(row=row_idx, column=10, value=nomi_chiese.get(m.chiesa_id, "") if m.chiesa_id else CASSA_PARROCCHIA)
 
     # Auto column widths
     for col in range(1, len(headers) + 1):

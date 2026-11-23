@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from app.database import get_db
 from app import models
 from app.auth import get_current_user
+from app.permessi import chiesa_utente
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -16,8 +17,14 @@ def get_stats(
     db: Session = Depends(get_db),
     dal: Optional[date] = Query(None),
     al: Optional[date] = Query(None),
-    _: models.Utente = Depends(get_current_user),
+    chiesa_id: Optional[int] = Query(None),
+    utente: models.Utente = Depends(get_current_user),
 ):
+    cid = chiesa_utente(utente) or chiesa_id
+
+    def _chiesa(q, col):
+        return q.filter(col.class_.chiesa_id == cid) if cid else q
+
     dialect = db.bind.dialect.name if db.bind is not None else "sqlite"
 
     def _period_expr(date_col, fmt: str):
@@ -31,7 +38,7 @@ def get_stats(
 
     def period_dict(date_col, fmt: str) -> dict[str, int]:
         expr = _period_expr(date_col, fmt).label("p")
-        q = db.query(expr, func.count().label("n"))
+        q = _chiesa(db.query(expr, func.count().label("n")), date_col)
         if dal:
             q = q.filter(date_col >= dal)
         if al:
@@ -39,7 +46,7 @@ def get_stats(
         return {r.p: r.n for r in q.group_by(expr).all() if r.p}
 
     def count_total(model, date_col):
-        q = db.query(model)
+        q = _chiesa(db.query(model), date_col)
         if dal:
             q = q.filter(date_col >= dal)
         if al:
@@ -84,9 +91,14 @@ def get_stats(
 @router.get("/dashboard/")
 def dashboard_summary(
     db: Session = Depends(get_db),
-    _: models.Utente = Depends(get_current_user),
+    utente: models.Utente = Depends(get_current_user),
 ):
     """Single endpoint returning all dashboard summary data."""
+    cid = chiesa_utente(utente)
+
+    def _q(Model):
+        q = db.query(Model)
+        return q.filter(Model.chiesa_id == cid) if cid else q
     from datetime import date
     from calendar import monthrange
 
@@ -95,19 +107,20 @@ def dashboard_summary(
     ultimo_mese = oggi.replace(day=monthrange(oggi.year, oggi.month)[1])
 
     # Sacrament totals
-    tot_battesimi = db.query(models.Battesimo).count()
-    tot_cresime = db.query(models.Cresima).count()
-    tot_matrimoni = db.query(models.Matrimonio).count()
+    tot_battesimi = _q(models.Battesimo).count()
+    tot_cresime = _q(models.Cresima).count()
+    tot_matrimoni = _q(models.Matrimonio).count()
 
     # Persone (rubrica)
     try:
-        tot_persone = db.query(models.Persona).count()
+        # La rubrica anime è della parrocchia: non visibile agli utenti di una chiesa
+        tot_persone = 0 if cid else db.query(models.Persona).count()
     except Exception:
         tot_persone = 0
 
     # Contabilità this month
     try:
-        movimenti_mese = db.query(models.MovimentoContabile).filter(
+        movimenti_mese = _q(models.MovimentoContabile).filter(
             models.MovimentoContabile.data >= primo_mese,
             models.MovimentoContabile.data <= ultimo_mese,
         ).all()

@@ -20,3 +20,16 @@ export function parseItDate(value: string): string | null {
   const mm = m[2].padStart(2, '0')
   return `${m[3]}-${mm}-${dd}`
 }
+
+/** Numero di registro come "anno/numero" (es. 2026/12), o "—" se assente. */
+export function numeroRegistro(r: { numero_registro?: string | null; anno_registro?: number | null }): string {
+  const n = (r.numero_registro ?? '').toString().trim()
+  if (!n) return '—'
+  return r.anno_registro && !n.includes('/') ? `${r.anno_registro}/${n}` : n
+}
+
+/** Messaggio d'errore leggibile da una risposta dell'API. */
+export function erroreApi(e: unknown, fallback = 'Operazione non riuscita'): string {
+  const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
+  return typeof detail === 'string' ? detail : fallback
+}

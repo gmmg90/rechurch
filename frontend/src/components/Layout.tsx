@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { useChiese } from './ChiesaSelect'
 import { useAuth } from '../contexts/AuthContext'
 import { useModuli } from '../contexts/ModuliContext'
 import { verificheApi } from '../api/client'
@@ -63,8 +64,12 @@ function useIsMobile(): boolean {
   return isMobile
 }
 
+const PAGINE_PARROCCHIA = ['/rubrica', '/certificati', '/importa', '/impostazioni']
+
 export default function Layout() {
-  const { user, logout } = useAuth()
+  const { user, logout, chiesaUtente } = useAuth()
+  // Per un utente limitato l'API restituisce solo la sua chiesa
+  const { data: chiese = [] } = useChiese()
   const { moduli, isLoading: moduliLoading } = useModuli()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
@@ -82,6 +87,8 @@ export default function Layout() {
   const navItems = [
     ...ALL_NAV_ITEMS.filter(item => {
       if (isMobile && item.desktopOnly) return false   // snello su mobile
+      // Utenti di una singola chiesa: niente pagine di tutta la parrocchia
+      if (chiesaUtente !== null && PAGINE_PARROCCHIA.includes(item.to)) return false
       if (!item.modulo) return true
       if (moduliLoading) return true
       return moduli[item.modulo] !== false
@@ -173,6 +180,11 @@ export default function Layout() {
                 <span className="inline-block text-xs bg-indigo-700 text-indigo-200 rounded px-1.5 py-0.5 mt-0.5">
                   {roleLabel}
                 </span>
+                {chiesaUtente !== null && chiese[0] && (
+                  <p className="text-[11px] text-indigo-300 truncate mt-0.5" title="Vedi solo i dati di questa chiesa">
+                    {chiese[0].nome}
+                  </p>
+                )}
               </div>
             </div>
           )}
