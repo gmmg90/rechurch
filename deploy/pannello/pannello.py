@@ -460,6 +460,11 @@ if __name__ != "__main__":
         else:
             stato_agg = ""
 
+        auto = leggi_env(HOME / "aggiornamento-automatico.stato")
+        if auto:
+            stato_agg += (f'<p class="muted">Aggiornamento automatico: ultimo controllo {e(auto.get("CONTROLLO", ""))} — '
+                          f'{e(auto.get("MESSAGGIO", ""))} · versione {e(auto.get("VERSIONE", ""))}</p>')
+
         suggerimento = (f'scrivi "auto" per {e("<slug>." + base)}' if base
                         else "es. sanrocco.tuodominio.it (più domini separati da virgola)")
         corpo = f'''

@@ -274,6 +274,10 @@ cmd_init() {
     cmd_build
     generate
     dc up -d --remove-orphans
+    git -C "$REPO_DIR" rev-parse HEAD > "$HOME_DIR/.versione-installata" 2>/dev/null || true
+    if [[ -d /run/systemd/system ]] && ! systemctl is-enabled --quiet rechurch-aggiornamento.timer 2>/dev/null; then
+        cmd_aggiornamenti attiva
+    fi
     ok "Inizializzazione completata. Prossimo passo: $0 add <slug> <dominio> \"Nome parrocchia\""
 }
 
@@ -388,6 +392,9 @@ cmd_up() {
 
 cmd_update() {
     need_root; need_init
+    # Un solo aggiornamento alla volta (terminale, pannello o automatico)
+    exec 9>"$HOME_DIR/.lock-aggiornamento"
+    flock -n 9 || die "C'è già un aggiornamento in corso."
     info "Aggiornamento del codice in $REPO_DIR"
     git -C "$REPO_DIR" pull --ff-only
     info "Backup di sicurezza prima dell'aggiornamento"
@@ -404,6 +411,112 @@ cmd_update() {
         ok "Il pannello si riavvia tra pochi secondi con la nuova versione"
         (sleep 5; systemctl try-restart rechurch-pannello) >/dev/null 2>&1 &
     fi
+    git -C "$REPO_DIR" rev-parse HEAD > "$HOME_DIR/.versione-installata"
+    ok "Versione installata: $(git -C "$REPO_DIR" log -1 --format='%h %s')"
+}
+
+# ── aggiornamenti automatici da GitHub ────────────────────────────────────────
+
+STATO_AUTO() { echo "$HOME_DIR/aggiornamento-automatico.stato"; }
+
+scrivi_stato_auto() {  # scrivi_stato_auto <esito> <messaggio>
+    {
+        echo "CONTROLLO=\"$(date '+%Y-%m-%d %H:%M')\""
+        echo "ESITO=\"$1\""
+        echo "MESSAGGIO=\"$2\""
+        echo "VERSIONE=\"$(git -C "$REPO_DIR" log -1 --format='%h %ad' --date=short 2>/dev/null)\""
+    } > "$(STATO_AUTO)"
+}
+
+# Controlla GitHub e aggiorna solo se c'è una versione nuova del branch.
+# Confronta con l'ultima versione installata con successo: se un aggiornamento
+# fallisce (es. build), il tentativo si ripete al controllo successivo.
+cmd_auto_update() {
+    need_root; need_init
+    local branch remoto installata
+    branch="$(get_var "$HOME_DIR/.env" RECHURCH_BRANCH)"; branch="${branch:-main}"
+    if ! git -C "$REPO_DIR" fetch -q origin "$branch"; then
+        scrivi_stato_auto "errore" "GitHub non raggiungibile"
+        die "Impossibile contattare GitHub"
+    fi
+    remoto="$(git -C "$REPO_DIR" rev-parse "origin/$branch")"
+    installata="$(cat "$HOME_DIR/.versione-installata" 2>/dev/null || true)"
+    if [[ "$remoto" == "$installata" ]]; then
+        scrivi_stato_auto "aggiornato" "Nessuna novità"
+        echo "$(date '+%F %T') nessun aggiornamento ($branch ${remoto:0:7})"
+        return 0
+    fi
+    if [[ -n "$(git -C "$REPO_DIR" status --porcelain --untracked-files=no)" ]]; then
+        scrivi_stato_auto "errore" "Modifiche locali nel codice: aggiornamento sospeso"
+        die "Ci sono modifiche locali in $REPO_DIR: aggiornamento automatico sospeso."
+    fi
+    if [[ "$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD)" != "$branch" ]]; then
+        git -C "$REPO_DIR" checkout -q "$branch"
+    fi
+    echo "$(date '+%F %T') nuova versione ${remoto:0:7}: aggiornamento"
+    # Nuovo processo: dopo il pull esegue lo script nella versione aggiornata
+    if "$REPO_DIR/deploy/rechurch.sh" update; then
+        scrivi_stato_auto "ok" "Aggiornato alla nuova versione"
+    else
+        scrivi_stato_auto "errore" "Aggiornamento fallito: le parrocchie restano sulla versione precedente"
+        die "Aggiornamento fallito (vedi /var/log/rechurch-aggiornamento.log)"
+    fi
+}
+
+cmd_aggiornamenti() {
+    need_root; need_init
+    local sub="${1:-stato}" ora="${2:-04:30}"
+    case "$sub" in
+        attiva)
+            [[ -d /run/systemd/system ]] || die "Serve systemd"
+            [[ "$ora" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || die "Orario non valido: $ora (es. 04:30)"
+            {
+                echo "[Unit]"
+                echo "Description=ReChurch - aggiornamento automatico da GitHub"
+                echo "After=network-online.target docker.service"
+                echo "Wants=network-online.target"
+                echo
+                echo "[Service]"
+                echo "Type=oneshot"
+                echo "Environment=RECHURCH_HOME=$HOME_DIR"
+                echo "ExecStart=$REPO_DIR/deploy/rechurch.sh auto-update"
+                echo "StandardOutput=append:/var/log/rechurch-aggiornamento.log"
+                echo "StandardError=append:/var/log/rechurch-aggiornamento.log"
+                echo "TimeoutStartSec=2h"
+            } > /etc/systemd/system/rechurch-aggiornamento.service
+            {
+                echo "[Unit]"
+                echo "Description=ReChurch - controllo giornaliero degli aggiornamenti"
+                echo
+                echo "[Timer]"
+                echo "OnCalendar=*-*-* $ora:00"
+                echo "RandomizedDelaySec=10m"
+                echo "Persistent=true"
+                echo
+                echo "[Install]"
+                echo "WantedBy=timers.target"
+            } > /etc/systemd/system/rechurch-aggiornamento.timer
+            systemctl daemon-reload
+            systemctl enable --now rechurch-aggiornamento.timer >/dev/null 2>&1
+            [[ -f "$HOME_DIR/.versione-installata" ]] || git -C "$REPO_DIR" rev-parse HEAD > "$HOME_DIR/.versione-installata"
+            ok "Aggiornamenti automatici attivi: ogni notte alle $ora controllo di GitHub" ;;
+        disattiva)
+            systemctl disable --now rechurch-aggiornamento.timer >/dev/null 2>&1 || true
+            ok "Aggiornamenti automatici disattivati" ;;
+        ora)
+            systemctl start --no-block rechurch-aggiornamento.service
+            ok "Controllo avviato: tail -f /var/log/rechurch-aggiornamento.log" ;;
+        stato)
+            if systemctl is-enabled --quiet rechurch-aggiornamento.timer 2>/dev/null; then
+                echo "Aggiornamenti automatici: attivi"
+                systemctl list-timers rechurch-aggiornamento.timer --no-pager 2>/dev/null | sed -n 2p
+            else
+                echo "Aggiornamenti automatici: disattivati"
+            fi
+            [[ -f "$(STATO_AUTO)" ]] && cat "$(STATO_AUTO)"
+            tail -n 5 /var/log/rechurch-aggiornamento.log 2>/dev/null || true ;;
+        *) die "Uso: $0 aggiornamenti attiva [HH:MM] | disattiva | ora | stato" ;;
+    esac
 }
 
 cmd_backup() {
@@ -616,6 +729,8 @@ ReChurch — gestione multi-parrocchia   (dati in $HOME_DIR)
   list                                   elenca le parrocchie e il loro stato
   up                                     rigenera la configurazione e avvia tutto
   update                                 git pull + backup + build + riavvio di tutte le parrocchie
+  aggiornamenti attiva [HH:MM] | disattiva | ora | stato
+                                         aggiornamento automatico notturno da GitHub (attivo dopo init)
   backup [slug|all]                      archivio DB+allegati in $HOME_DIR/backups/<slug>/
   restore <slug> <file.db|.tar.gz>       ripristina il database di una parrocchia
   reset-password <slug> <email>          genera una nuova password per un utente
@@ -640,6 +755,8 @@ main() {
         list|ls) cmd_list ;;
         up|regen) cmd_up ;;
         update) cmd_update ;;
+        auto-update) cmd_auto_update ;;
+        aggiornamenti) cmd_aggiornamenti "$@" ;;
         backup) cmd_backup "$@" ;;
         restore) cmd_restore "$@" ;;
         reset-password) cmd_reset_password "$@" ;;
