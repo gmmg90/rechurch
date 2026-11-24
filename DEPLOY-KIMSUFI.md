@@ -189,6 +189,24 @@ Per cambiare un'impostazione di una sola parrocchia (domini, cartella dei
 backup, ecc.) modifica `/srv/rechurch/parrocchie/<slug>.env` e lancia
 `sudo $R up`.
 
+### Aggiornamenti automatici da GitHub
+
+Dopo `init` il server controlla **ogni notte alle 04:30** il branch `main` su
+GitHub (`RECHURCH_BRANCH` nel `.env`). Se c'è una versione nuova: backup di
+tutte le parrocchie, nuova immagine, riavvio. Se l'aggiornamento non riesce, le
+parrocchie restano sulla versione precedente e il tentativo si ripete la notte
+dopo. L'esito si vede nel pannello e in `/var/log/rechurch-aggiornamento.log`.
+
+```bash
+sudo $R aggiornamenti stato            # attivi? ultimo controllo ed esito
+sudo $R aggiornamenti ora              # controlla subito
+sudo $R aggiornamenti attiva 03:15     # cambia orario
+sudo $R aggiornamenti disattiva
+```
+
+> Tutto ciò che viene unito in `main` arriva sui server entro una notte:
+> unisci in `main` solo modifiche già provate.
+
 ## 7. Backup
 
 Sono previsti tre livelli:
