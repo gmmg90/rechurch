@@ -5,7 +5,8 @@ import { Search, Plus, Pencil, Trash2, FileDown, Heart } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { matrimoniApi, pdfApi, type Matrimonio } from '../../api/client'
 import Pagination from '../../components/Pagination'
-import { numeroRegistro } from '../../utils/date'
+import { CardList, CardItem, IconAction, Fab } from '../../components/Mobile'
+import { numeroRegistro, formatDate } from '../../utils/date'
 import { ChiesaFilter } from '../../components/ChiesaSelect'
 import { TableSkeleton } from '../../components/LoadingSkeleton'
 
@@ -53,14 +54,15 @@ export default function MatrimoniList() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex items-center justify-between mb-6">
+      <Fab to="/matrimoni/nuovo" label="Nuovo" />
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Matrimoni</h1>
+          <h1 className="hidden md:block text-2xl font-bold text-gray-800">Matrimoni</h1>
           <p className="text-gray-500 text-sm mt-0.5">{total} record trovati</p>
         </div>
         <Link
           to="/matrimoni/nuovo"
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+          className="hidden md:flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
         >
           <Plus size={16} /> Nuovo
         </Link>
@@ -91,8 +93,29 @@ export default function MatrimoniList() {
           <div className="p-4">
             <TableSkeleton rows={8} cols={7} />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
+        ) : (<>
+          <CardList>
+            {data.length === 0 && (
+              <li className="py-14 text-center text-gray-500">
+                {hasSearch ? 'Nessun risultato con questi filtri' : <Link to="/matrimoni/nuovo" className="text-indigo-600 font-medium">Aggiungi il primo record</Link>}
+              </li>
+            )}
+            {data.map(m => (
+              <CardItem
+                key={m.id}
+                to={`/matrimoni/${m.id}/modifica`}
+                title={`${m.sposo_nome} ${m.sposo_cognome}`}
+                aside={formatDate(m.data_matrimonio)}
+                subtitle={`e ${m.sposa_nome} ${m.sposa_cognome}` || undefined}
+                meta={m.numero_registro ? `Reg. ${numeroRegistro(m)}` : undefined}
+                actions={<>
+                  <IconAction href={pdfApi.matrimonioUrl(m.id)} label="Scarica PDF" tone="green"><FileDown size={19} /></IconAction>
+                  <IconAction onClick={() => handleDelete(m)} label="Elimina" tone="red"><Trash2 size={19} /></IconAction>
+                </>}
+              />
+            ))}
+          </CardList>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
@@ -126,7 +149,7 @@ export default function MatrimoniList() {
                     <tr key={m.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-gray-800">{m.sposo_nome} {m.sposo_cognome}</td>
                       <td className="px-4 py-3 text-gray-700">{m.sposa_nome} {m.sposa_cognome}</td>
-                      <td className="px-4 py-3 text-gray-600">{m.data_matrimonio}</td>
+                      <td className="px-4 py-3 text-gray-600">{formatDate(m.data_matrimonio)}</td>
                       <td className="px-4 py-3 text-gray-600">{m.luogo_matrimonio}</td>
                       <td className="px-4 py-3 text-gray-600">{m.ministro}</td>
                       <td className="px-4 py-3 text-gray-500">{numeroRegistro(m)}</td>
@@ -161,7 +184,7 @@ export default function MatrimoniList() {
               </tbody>
             </table>
           </div>
-        )}
+        </>)}
 
         {!isLoading && total > PAGE_SIZE && (
           <div className="px-4 pb-4">

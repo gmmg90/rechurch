@@ -1,3 +1,78 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+}
+
+/* ── Telefono ─────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Sotto i 16px Safari su iPhone ingrandisce la pagina a ogni tocco su un campo */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  /* Date: altezza uguale agli altri campi e testo allineato a sinistra su iOS */
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='time'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 2.75rem;
+    text-align: left;
+  }
+  input[type='date']::-webkit-date-and-time-value {
+    text-align: left;
+  }
+
+  /* FullCalendar: barra compatta */
+  .fc .fc-toolbar.fc-header-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+  .fc .fc-button {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  .fc .fc-list-event-title,
+  .fc .fc-list-event-time {
+    font-size: 0.95rem;
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  /* spazio in fondo alle pagine per barra di navigazione + pulsante "+" */
+  .pb-mobile-nav {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+  .bottom-above-nav {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
