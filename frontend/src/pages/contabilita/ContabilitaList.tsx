@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Pencil, Trash2, Download, Wallet, TrendingUp, TrendingDown, Scale, Paperclip } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { contabilitaApi, type CategoriaContabile, type Fornitore } from '../../api/client'
+import { CardList, CardItem, IconAction, Fab } from '../../components/Mobile'
 import { ChiesaFilter, useChiese } from '../../components/ChiesaSelect'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -220,8 +221,9 @@ export default function ContabilitaList() {
 
   return (
     <div className="p-4 sm:p-8">
+      {tab === 'movimenti' && <Fab to="/contabilita/nuovo" label="Movimento" />}
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="hidden md:flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Wallet className="text-indigo-600" size={28} />
           <div>
@@ -232,32 +234,32 @@ export default function ContabilitaList() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5 flex items-center gap-4 min-w-0">
+          <div className="hidden sm:flex w-11 h-11 rounded-xl bg-green-100 items-center justify-center flex-shrink-0">
             <TrendingUp className="text-green-600" size={22} />
           </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Entrate</p>
-            <p className="text-xl font-bold text-green-600">{formatEur(riepilogo?.totale_entrate ?? 0)}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-xs text-gray-500 font-medium uppercase tracking-wide">Entrate</p>
+            <p className="text-[15px] sm:text-xl font-bold text-green-600 tabular-nums truncate">{formatEur(riepilogo?.totale_entrate ?? 0)}</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5 flex items-center gap-4 min-w-0">
+          <div className="hidden sm:flex w-11 h-11 rounded-xl bg-red-100 items-center justify-center flex-shrink-0">
             <TrendingDown className="text-red-600" size={22} />
           </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Uscite</p>
-            <p className="text-xl font-bold text-red-600">{formatEur(riepilogo?.totale_uscite ?? 0)}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-xs text-gray-500 font-medium uppercase tracking-wide">Uscite</p>
+            <p className="text-[15px] sm:text-xl font-bold text-red-600 tabular-nums truncate">{formatEur(riepilogo?.totale_uscite ?? 0)}</p>
           </div>
         </div>
-        <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4`}>
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${saldoPositivo ? 'bg-indigo-100' : 'bg-red-100'}`}>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-5 flex items-center gap-4 min-w-0">
+          <div className={`hidden sm:flex w-11 h-11 rounded-xl items-center justify-center flex-shrink-0 ${saldoPositivo ? 'bg-indigo-100' : 'bg-red-100'}`}>
             <Scale className={saldoPositivo ? 'text-indigo-600' : 'text-red-600'} size={22} />
           </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Saldo</p>
-            <p className={`text-xl font-bold ${saldoPositivo ? 'text-indigo-600' : 'text-red-600'}`}>{formatEur(saldo)}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] sm:text-xs text-gray-500 font-medium uppercase tracking-wide">Saldo</p>
+            <p className={`text-[15px] sm:text-xl font-bold tabular-nums truncate ${saldoPositivo ? 'text-indigo-600' : 'text-red-600'}`}>{formatEur(saldo)}</p>
           </div>
         </div>
       </div>
@@ -297,12 +299,12 @@ export default function ContabilitaList() {
       )}
 
       {/* Tab switcher */}
-      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-full md:w-fit">
         {(['movimenti', 'categorie', 'fornitori'] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => { setTab(t); setDeleteConfirm(null) }}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${
+            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${
               tab === t ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -316,7 +318,7 @@ export default function ContabilitaList() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Toolbar */}
           <div className="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative w-full md:w-auto md:flex-1 md:min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input
                 className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
@@ -326,7 +328,7 @@ export default function ContabilitaList() {
               />
             </div>
             <select
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full md:w-auto px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
               value={tipoFilter}
               onChange={e => setTipoFilter(e.target.value)}
             >
@@ -342,35 +344,35 @@ export default function ContabilitaList() {
                 extra={[{ value: 'parrocchia', label: 'Cassa parrocchia' }]}
               />
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 flex-1 md:flex-none min-w-0">
               <label className="text-xs text-gray-500">Dal</label>
               <input
                 type="date"
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full md:w-auto min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 value={dal}
                 onChange={e => setDal(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 flex-1 md:flex-none min-w-0">
               <label className="text-xs text-gray-500">Al</label>
               <input
                 type="date"
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full md:w-auto min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 value={al}
                 onChange={e => setAl(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 ml-auto">
+            <div className="flex gap-2 w-full md:w-auto md:ml-auto">
               <a
                 href={contabilitaApi.exportExcelUrl(dal || undefined, al || undefined, cassa || undefined)}
-                className="flex items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="flex flex-1 md:flex-none justify-center items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                 download
               >
                 <Download size={16} /> Esporta Excel
               </a>
               <button
                 onClick={() => navigate('/contabilita/nuovo')}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                className="hidden md:flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
               >
                 <Plus size={16} /> Nuovo Movimento
               </button>
@@ -381,8 +383,24 @@ export default function ContabilitaList() {
             <div className="p-4 sm:p-8 text-center text-gray-400">Caricamento...</div>
           ) : movimenti.length === 0 ? (
             <div className="p-4 sm:p-8 text-center text-gray-400">Nessun movimento trovato</div>
-          ) : (
-            <div className="overflow-x-auto">
+          ) : (<>
+            <CardList>
+              {movimenti.map(m => (
+                <CardItem
+                  key={m.id}
+                  to={`/contabilita/${m.id}/modifica`}
+                  leading={<span className={`w-1.5 self-stretch rounded-full ${m.tipo === 'entrata' ? 'bg-green-400' : 'bg-red-400'}`} />}
+                  title={m.descrizione}
+                  aside={<span className={`font-semibold ${m.tipo === 'entrata' ? 'text-green-600' : 'text-red-600'}`}>{m.tipo === 'uscita' ? '−' : '+'}{formatEur(m.importo)}</span>}
+                  subtitle={[formatDate(m.data), m.categoria_nome, conCasse ? m.chiesa_nome : null].filter(Boolean).join(' · ')}
+                  meta={m.fornitore_nome ?? undefined}
+                  actions={m.allegato_nome ? (
+                    <IconAction onClick={() => scaricaAllegato(m.id, m.allegato_nome)} label="Allegato" tone="indigo"><Paperclip size={18} /></IconAction>
+                  ) : undefined}
+                />
+              ))}
+            </CardList>
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500 border-b border-gray-100">
@@ -454,7 +472,7 @@ export default function ContabilitaList() {
                 </tbody>
               </table>
             </div>
-          )}
+          </>)}
         </div>
       )}
 

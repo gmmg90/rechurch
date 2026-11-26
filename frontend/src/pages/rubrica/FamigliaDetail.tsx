@@ -321,9 +321,9 @@ export default function FamigliaDetail() {
               <tr className="text-left text-gray-500 border-b border-gray-100">
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">Cognome</th>
-                <th className="px-4 py-3 font-medium">Città</th>
-                <th className="px-4 py-3 font-medium">Telefono</th>
-                <th className="px-4 py-3 font-medium w-28"></th>
+                <th className="hidden sm:table-cell px-4 py-3 font-medium">Città</th>
+                <th className="hidden sm:table-cell px-4 py-3 font-medium">Telefono</th>
+                <th className="px-2 sm:px-4 py-3 font-medium sm:w-28"></th>
               </tr>
             </thead>
             <tbody>
@@ -331,9 +331,9 @@ export default function FamigliaDetail() {
                 <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-medium text-gray-800">{p.nome}</td>
                   <td className="px-4 py-3 text-gray-700">{p.cognome}</td>
-                  <td className="px-4 py-3 text-gray-600">{p.citta ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">{p.telefono ?? '—'}</td>
-                  <td className="px-4 py-3">
+                  <td className="hidden sm:table-cell px-4 py-3 text-gray-600">{p.citta ?? '—'}</td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-gray-600">{p.telefono ?? '—'}</td>
+                  <td className="px-2 sm:px-4 py-3">
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => navigate(`/rubrica/persone/${p.id}`)}

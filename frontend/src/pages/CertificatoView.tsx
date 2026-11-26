@@ -94,48 +94,48 @@ function Toolbar({
     pdfApi.matrimonioUrl(id)
 
   return (
-    <div className="no-print sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 px-6 py-3 flex items-center gap-3">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
+    <div className="no-print sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
+      <button onClick={onBack} className="hidden md:flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800">
         <ChevronLeft size={16} /> {BACK_LABEL[tipo]}
       </button>
 
-      <div className="flex-1" />
+      <div className="hidden md:block flex-1" />
 
       <button
         onClick={onPrint}
         title="Apre il PDF in una nuova scheda, poi stampa dal lettore PDF"
-        className="flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-sm"
+        className="flex flex-1 md:flex-none justify-center items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 text-sm whitespace-nowrap bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-sm"
       >
         <Printer size={16} /> Stampa
       </button>
 
       <a
         href={pdfDownloadUrl}
-        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium"
+        className="flex flex-1 md:flex-none justify-center items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 text-sm whitespace-nowrap text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium"
         title="Scarica il PDF"
       >
-        <FileDown size={16} /> Scarica PDF
+        <FileDown size={16} /> <span className="hidden sm:inline">Scarica</span> PDF
       </a>
 
       {!editing ? (
         <button
           onClick={onToggleEdit}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 font-medium"
+          className="flex flex-1 md:flex-none justify-center items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 text-sm whitespace-nowrap text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 font-medium"
         >
-          <Unlock size={16} /> Sblocca modifica
+          <Unlock size={16} /> <span className="sm:hidden">Modifica</span><span className="hidden sm:inline">Sblocca modifica</span>
         </button>
       ) : (
         <>
           <button
             onClick={onCancel}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+            className="flex flex-1 md:flex-none justify-center items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 text-sm whitespace-nowrap text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
             <X size={16} /> Annulla
           </button>
           <button
             onClick={onSave}
             disabled={!dirty || saving}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium shadow-sm"
+            className="flex flex-1 md:flex-none justify-center items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 text-sm whitespace-nowrap bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium shadow-sm"
           >
             <Save size={16} /> {saving ? 'Salvataggio…' : 'Salva'}
           </button>
@@ -158,8 +158,8 @@ function Sheet({ children, config, title, editing }: {
     : null
 
   return (
-    <div className="certificate-sheet bg-white mx-auto my-8 shadow-lg print:shadow-none print:my-0">
-      <div className="px-16 py-14 print:px-12 print:py-10" style={{ fontFamily: '"Times New Roman", Georgia, serif' }}>
+    <div className="certificate-sheet bg-white mx-3 sm:mx-auto my-4 sm:my-8 rounded-lg sm:rounded-none shadow-lg print:shadow-none print:my-0 print:mx-0">
+      <div className="px-5 py-8 sm:px-16 sm:py-14 print:px-12 print:py-10 text-[15px] sm:text-base" style={{ fontFamily: '"Times New Roman", Georgia, serif' }}>
 
         {/* Intestazione parrocchia */}
         <div className="flex items-center gap-5 border-b-4 border-double border-[#1e3a5f] pb-5 mb-8">

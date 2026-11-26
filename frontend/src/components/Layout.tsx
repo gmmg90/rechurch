@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Church,
   Home,
@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   Menu,
   X,
+  ChevronLeft,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useChiese } from './ChiesaSelect'
@@ -66,6 +67,22 @@ function useIsMobile(): boolean {
 
 const PAGINE_PARROCCHIA = ['/rubrica', '/certificati', '/importa', '/impostazioni']
 
+// Barra in basso su telefono: le sezioni usate tutti i giorni, il resto nel menu
+const TAB_BAR = [
+  { to: '/',             label: 'Home',     icon: Home,         end: true,  modulo: null },
+  { to: '/rubrica',      label: 'Rubrica',  icon: BookOpen,     end: false, modulo: 'rubrica' },
+  { to: '/scadenziario', label: 'Agenda',   icon: CalendarDays, end: false, modulo: 'scadenziario' },
+  { to: '/contabilita',  label: 'Conti',    icon: Wallet,       end: false, modulo: 'contabilita' },
+]
+
+const TITOLI: [string, string][] = [
+  ['/battesimi', 'Battesimi'], ['/comunioni', 'Comunioni'], ['/cresime', 'Cresime'],
+  ['/matrimoni', 'Matrimoni'], ['/rubrica', 'Rubrica'], ['/contabilita', 'Contabilità'],
+  ['/scanner', 'Scanner'], ['/scadenziario', 'Scadenziario'], ['/certificati', 'Modelli'],
+  ['/importa', 'Importa dati'], ['/verifiche', 'Da verificare'], ['/impostazioni', 'Impostazioni'],
+  ['/utenti', 'Utenti'], ['/amministrazione', 'Amministrazione'],
+]
+
 export default function Layout() {
   const { user, logout, chiesaUtente } = useAuth()
   // Per un utente limitato l'API restituisce solo la sua chiesa
@@ -74,6 +91,7 @@ export default function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
   const { data: verifiche } = useQuery({
     queryKey: ['verifiche-conteggio'],
     queryFn: verificheApi.conteggio,
@@ -108,8 +126,18 @@ export default function Layout() {
 
   const roleLabel = user ? (ROLE_LABELS[user.ruolo] ?? user.ruolo) : ''
 
+  const tabs = TAB_BAR.filter(t => {
+    if (chiesaUtente !== null && PAGINE_PARROCCHIA.includes(t.to)) return false
+    if (!t.modulo || moduliLoading) return true
+    return moduli[t.modulo] !== false
+  })
+  const path = location.pathname
+  const titolo = path === '/' ? null : (TITOLI.find(([p]) => path === p || path.startsWith(p + '/'))?.[1] ?? null)
+  // Pagine di secondo livello (modifica, dettaglio, certificato): freccia indietro
+  const sottopagina = path.split('/').filter(Boolean).length > 1
+
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-[100dvh] bg-gray-50">
       {/* Backdrop (mobile only, when drawer open) */}
       {drawerOpen && (
         <div
@@ -121,7 +149,7 @@ export default function Layout() {
 
       {/* Sidebar — static on desktop, slide-in drawer on mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-indigo-900 flex flex-col transform transition-transform duration-200 md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-72 md:w-64 bg-indigo-900 flex flex-col pt-safe pb-safe md:pt-0 md:pb-0 transform transition-transform duration-200 md:static md:translate-x-0 ${
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -204,19 +232,49 @@ export default function Layout() {
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile top bar */}
-        <header className="md:hidden flex items-center gap-3 bg-indigo-900 text-white px-4 py-3 sticky top-0 z-20">
-          <button onClick={() => setDrawerOpen(true)} aria-label="Apri menu">
-            <Menu size={24} />
-          </button>
-          <div className="flex items-center gap-2">
-            <Church className="text-indigo-300" size={22} />
-            <span className="font-bold text-lg">ReChurch</span>
+        <header className="md:hidden bg-indigo-900 text-white pt-safe sticky top-0 z-20 shadow-sm">
+          <div className="flex items-center gap-1 h-14 px-2">
+            {sottopagina ? (
+              <button onClick={() => navigate(-1)} aria-label="Indietro"
+                className="w-11 h-11 flex items-center justify-center rounded-full active:bg-indigo-800">
+                <ChevronLeft size={26} />
+              </button>
+            ) : (
+              <div className="w-11 h-11 flex items-center justify-center">
+                <Church className="text-indigo-300" size={22} />
+              </div>
+            )}
+            <span className="flex-1 min-w-0 truncate font-semibold text-[17px] pr-3">
+              {titolo ?? 'ReChurch'}
+            </span>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto overscroll-contain pb-mobile-nav md:pb-0">
           <Outlet />
         </main>
+
+        {/* Mobile bottom tab bar */}
+        <nav className="md:hidden fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 pb-safe">
+          <div className="flex">
+            {tabs.map(({ to, label, icon: Icon, end }) => (
+              <NavLink key={to} to={to} end={end}
+                className={({ isActive }) =>
+                  `flex-1 flex flex-col items-center justify-center gap-0.5 h-14 text-[11px] font-medium ${
+                    isActive ? 'text-indigo-600' : 'text-gray-500'}`}>
+                {({ isActive }) => (<>
+                  <Icon size={22} strokeWidth={isActive ? 2.4 : 1.8} />
+                  {label}
+                </>)}
+              </NavLink>
+            ))}
+            <button onClick={() => setDrawerOpen(true)} aria-label="Apri menu"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 h-14 text-[11px] font-medium text-gray-500">
+              <Menu size={22} strokeWidth={1.8} />
+              Altro
+            </button>
+          </div>
+        </nav>
       </div>
     </div>
   )

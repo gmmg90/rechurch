@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import FullCalendar from '@fullcalendar/react'
+import { FabButton } from '../../components/Mobile'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
@@ -18,6 +19,7 @@ import GestisciCategorie from './GestisciCategorie'
 export default function ScadenziarioPage() {
   const qc = useQueryClient()
   const calRef = useRef<FullCalendar>(null)
+  const [telefono] = useState(() => window.matchMedia('(max-width: 767px)').matches)
   const [range, setRange] = useState<{ dal: string; al: string }>({ dal: '', al: '' })
   const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null)
   const [showDetail, setShowDetail] = useState(false)
@@ -100,18 +102,21 @@ export default function ScadenziarioPage() {
     annuale: 'Ogni anno',
   }
 
+  const nuovoEvento = () => { setEditEvento(null); setDefaultStart(null); setShowModal(true) }
+
   return (
-    <div className="p-6 h-screen flex flex-col">
+    <div className="p-4 md:p-6 md:h-full flex flex-col">
+      <FabButton onClick={nuovoEvento} label="Evento" />
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           <CalendarDays className="text-indigo-600" size={24} />
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Scadenziario</h1>
             <p className="text-gray-500 text-sm">Calendario eventi parrocchiali</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        <div className="flex items-center gap-2 flex-wrap justify-end w-full md:w-auto">
           <ChiesaFilter value={chiesa} onChange={setChiesa} />
           <button
             onClick={() => setShowCategorie(true)}
@@ -121,8 +126,8 @@ export default function ScadenziarioPage() {
             Categorie
           </button>
           <button
-            onClick={() => { setEditEvento(null); setDefaultStart(null); setShowModal(true) }}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+            onClick={nuovoEvento}
+            className="hidden md:flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
           >
             <Plus size={16} />
             Nuovo evento
@@ -143,23 +148,29 @@ export default function ScadenziarioPage() {
       )}
 
       {/* Calendar */}
-      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-4">
+      <div className="md:flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-3 md:p-4">
         <FullCalendar
           ref={calRef}
           plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
           locale={itLocale}
-          initialView="dayGridMonth"
-          headerToolbar={{
+          initialView={telefono ? 'listMonth' : 'dayGridMonth'}
+          headerToolbar={telefono ? {
+            left: 'prev,next',
+            center: 'title',
+            right: 'listMonth,dayGridMonth',
+          } : {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
           }}
+          buttonText={telefono ? { listMonth: 'Elenco', dayGridMonth: 'Mese' } : undefined}
+          noEventsText="Nessun evento in questo mese"
           events={fcEvents}
           datesSet={handleDatesSet}
           eventClick={handleEventClick}
           dateClick={handleDateClick}
           eventDisplay="block"
-          height="100%"
+          height={telefono ? 'auto' : '100%'}
           dayMaxEvents={3}
         />
       </div>
@@ -168,7 +179,7 @@ export default function ScadenziarioPage() {
       {showDetail && selectedEvento && (
         <div className="fixed inset-0 bg-black/30 z-40 flex justify-end" onClick={() => setShowDetail(false)}>
           <div
-            className="w-80 bg-white h-full shadow-2xl p-6 overflow-y-auto flex flex-col gap-4"
+            className="w-full sm:w-80 bg-white h-full shadow-2xl p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] overflow-y-auto flex flex-col gap-4"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">

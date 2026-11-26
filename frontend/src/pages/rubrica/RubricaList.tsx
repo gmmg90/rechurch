@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Pencil, Trash2, Eye, Users, BookOpen } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { rubricaApi, type Persona, type Famiglia } from '../../api/client'
+import { CardList, CardItem, Fab } from '../../components/Mobile'
 
 type Tab = 'persone' | 'famiglie'
 
@@ -83,17 +84,18 @@ export default function RubricaList() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex items-center justify-between mb-6">
+      {tab === 'persone' && <Fab to="/rubrica/persone/nuova" label="Persona" />}
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <div className="flex items-center gap-3">
-          <BookOpen className="text-indigo-600" size={28} />
+          <BookOpen className="hidden md:block text-indigo-600" size={28} />
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Rubrica Anime</h1>
+            <h1 className="hidden md:block text-2xl font-bold text-gray-800">Rubrica Anime</h1>
             <p className="text-gray-500 text-sm mt-0.5">
               {tab === 'persone' ? `${persone.length} persone` : `${famiglie.length} famiglie`}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="hidden md:flex gap-2">
           {tab === 'persone' ? (
             <button
               onClick={() => navigate('/rubrica/persone/nuova')}
@@ -113,10 +115,10 @@ export default function RubricaList() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-full md:w-fit">
         <button
           onClick={() => { setTab('persone'); setRawSearch(''); setDebouncedSearch('') }}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 md:flex-none px-4 py-2 md:py-1.5 rounded-md text-sm font-medium transition-colors ${
             tab === 'persone'
               ? 'bg-white text-gray-800 shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
@@ -126,7 +128,7 @@ export default function RubricaList() {
         </button>
         <button
           onClick={() => { setTab('famiglie'); setRawSearch(''); setDebouncedSearch('') }}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 md:flex-none px-4 py-2 md:py-1.5 rounded-md text-sm font-medium transition-colors ${
             tab === 'famiglie'
               ? 'bg-white text-gray-800 shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
@@ -152,8 +154,21 @@ export default function RubricaList() {
 
         {isLoading ? (
           <div className="p-4 sm:p-8 text-center text-gray-400">Caricamento...</div>
-        ) : tab === 'persone' ? (
-          <div className="overflow-x-auto">
+        ) : tab === 'persone' ? (<>
+          <CardList>
+            {persone.length === 0 && <li className="py-14 text-center text-gray-500">Nessun risultato</li>}
+            {persone.map(p => (
+              <CardItem
+                key={p.id}
+                to={`/rubrica/persone/${p.id}`}
+                leading={<span className="w-10 h-10 shrink-0 rounded-full bg-indigo-50 text-indigo-600 text-sm font-semibold flex items-center justify-center">{(p.nome[0] ?? '') + (p.cognome[0] ?? '')}</span>}
+                title={`${p.cognome} ${p.nome}`}
+                subtitle={[p.citta, p.famiglia_cognome && `Fam. ${p.famiglia_cognome}`].filter(Boolean).join(' · ') || undefined}
+                meta={p.telefono ?? undefined}
+              />
+            ))}
+          </CardList>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
@@ -226,8 +241,22 @@ export default function RubricaList() {
               </tbody>
             </table>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
+        </>) : (<>
+          <CardList>
+            {famiglie.length === 0 && <li className="py-14 text-center text-gray-500">Nessun risultato</li>}
+            {famiglie.map(f => (
+              <CardItem
+                key={f.id}
+                to={`/rubrica/famiglie/${f.id}`}
+                leading={<span className="w-10 h-10 shrink-0 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center"><Users size={18} /></span>}
+                title={`Fam. ${f.cognome}`}
+                subtitle={f.citta ?? undefined}
+                aside={`${f.num_persone ?? 0} pers.`}
+                meta={f.telefono ?? undefined}
+              />
+            ))}
+          </CardList>
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
@@ -296,7 +325,7 @@ export default function RubricaList() {
               </tbody>
             </table>
           </div>
-        )}
+        </>)}
       </div>
     </div>
   )
