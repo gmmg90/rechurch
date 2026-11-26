@@ -23,6 +23,7 @@ import {
 } from '../api/client'
 import ProssimiEventiWidget from './dashboard/ProssimiEventiWidget'
 import ContabilitaMeseWidget from './dashboard/ContabilitaMeseWidget'
+import RicorrenzeWidget from './dashboard/RicorrenzeWidget'
 
 // ── Colours ───────────────────────────────────────────────────────────────────
 const C = { battesimi: '#3b82f6', cresime: '#f59e0b', matrimoni: '#f43f5e' }
@@ -71,6 +72,7 @@ const DEFAULT_LAYOUTS: Layouts = {
     { i: 'eventi', x: 0,  y: 7, w: 5,  h: 5, minH: 3 },
     { i: 'contab', x: 5,  y: 7, w: 4,  h: 5, minH: 4, maxH: 5 },
     { i: 'azioni', x: 9,  y: 7, w: 3,  h: 5, minH: 3 },
+    { i: 'ricorrenze', x: 0, y: 12, w: 6, h: 6, minH: 4 },
   ],
   md: [
     { i: 'stats',  x: 0, y: 0,  w: 10, h: 2 },
@@ -78,7 +80,8 @@ const DEFAULT_LAYOUTS: Layouts = {
     { i: 'donut',  x: 6, y: 2,  w: 4,  h: 5 },
     { i: 'eventi', x: 0, y: 7,  w: 5,  h: 5 },
     { i: 'contab', x: 5, y: 7,  w: 5,  h: 5 },
-    { i: 'azioni', x: 0, y: 12, w: 10, h: 3 },
+    { i: 'ricorrenze', x: 0, y: 12, w: 5, h: 6, minH: 4 },
+    { i: 'azioni', x: 5, y: 12, w: 5, h: 6 },
   ],
   sm: [
     { i: 'stats',  x: 0, y: 0,  w: 6, h: 4 },
@@ -86,7 +89,8 @@ const DEFAULT_LAYOUTS: Layouts = {
     { i: 'donut',  x: 0, y: 9,  w: 6, h: 5 },
     { i: 'eventi', x: 0, y: 14, w: 6, h: 5 },
     { i: 'contab', x: 0, y: 19, w: 6, h: 5 },
-    { i: 'azioni', x: 0, y: 24, w: 6, h: 3 },
+    { i: 'azioni', x: 0, y: 24, w: 6, h: 5 },
+    { i: 'ricorrenze', x: 0, y: 29, w: 6, h: 6, minH: 4 },
   ],
 }
 
@@ -95,7 +99,16 @@ const LAYOUT_KEY = 'rechurch_dashboard_layout'
 function loadLayouts(): Layouts {
   try {
     const saved = localStorage.getItem(LAYOUT_KEY)
-    return saved ? JSON.parse(saved) : DEFAULT_LAYOUTS
+    if (!saved) return DEFAULT_LAYOUTS
+    // layout salvato prima che esistessero alcuni widget: aggiungili nella posizione predefinita
+    const parsed: Layouts = JSON.parse(saved)
+    const out: Layouts = { ...parsed }
+    for (const bp of Object.keys(DEFAULT_LAYOUTS)) {
+      const cur = parsed[bp] ?? []
+      const mancanti = DEFAULT_LAYOUTS[bp].filter(d => !cur.some(c => c.i === d.i))
+      out[bp] = [...cur, ...mancanti.map(d => ({ ...d, y: Infinity }))]
+    }
+    return out
   } catch {
     return DEFAULT_LAYOUTS
   }
@@ -443,9 +456,10 @@ export default function Dashboard() {
         </div>
         <div className="mb-4"><GlobalSearch /></div>
 
-        {/* Mobile snello: solo riepilogo, prossimi eventi e azioni rapide */}
+        {/* Mobile snello: riepilogo, ricorrenze, prossimi eventi e azioni rapide */}
         <div className="space-y-4">
           <Widget>{statsContent}</Widget>
+          <Widget><RicorrenzeWidget compatto /></Widget>
           <Widget><ProssimiEventiWidget /></Widget>
           <Widget>{azioniContent}</Widget>
         </div>
@@ -520,6 +534,15 @@ export default function Dashboard() {
               <GripVertical size={14} className="text-gray-300" />
             </div>
             <ContabilitaMeseWidget />
+          </Widget>
+        </div>
+
+        <div key="ricorrenze">
+          <Widget>
+            <div className="drag-handle flex items-center gap-2 mb-1 cursor-grab active:cursor-grabbing">
+              <GripVertical size={14} className="text-gray-300" />
+            </div>
+            <RicorrenzeWidget />
           </Widget>
         </div>
 

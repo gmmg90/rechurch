@@ -138,29 +138,25 @@ def anniversari_prossimi(
     risultati = []
     for m in matrimoni:
         dm = m.data_matrimonio
-        try:
-            this_year = dm.replace(year=today.year)
-        except (ValueError, AttributeError):
-            continue
-
-        prossimo = this_year if this_year >= today else (
-            dm.replace(year=today.year + 1) if True else None
-        )
-        try:
-            if this_year < today:
-                prossimo = dm.replace(year=today.year + 1)
-            else:
-                prossimo = this_year
-        except ValueError:
+        prossimo = None
+        for anno in (today.year, today.year + 1):
+            try:
+                cand = dm.replace(year=anno)
+            except ValueError:  # 29 febbraio in anno non bisestile -> 28 febbraio
+                cand = dm.replace(year=anno, day=28)
+            if cand >= today:
+                prossimo = cand
+                break
+        if prossimo is None:
             continue
 
         days_until = (prossimo - today).days
-        if 0 <= days_until <= giorni:
-            anni = today.year - dm.year + (1 if prossimo.year > today.year else 0)
+        anni = prossimo.year - dm.year
+        if 0 <= days_until <= giorni and anni > 0:
             risultati.append({
                 "id": m.id,
-                "sposo": f"{m.nome_sposo} {m.cognome_sposo}",
-                "sposa": f"{m.nome_sposa} {m.cognome_sposa}",
+                "sposo": f"{m.sposo_nome} {m.sposo_cognome}",
+                "sposa": f"{m.sposa_nome} {m.sposa_cognome}",
                 "data_matrimonio": dm.isoformat(),
                 "giorni_mancanti": days_until,
                 "anni": anni,
