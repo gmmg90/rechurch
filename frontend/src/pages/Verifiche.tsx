@@ -89,11 +89,11 @@ export default function Verifiche() {
   return (
     <div className="p-4 sm:p-8">
       <div className="flex items-start gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+        <div className="hidden md:flex w-10 h-10 rounded-xl bg-indigo-50 items-center justify-center flex-shrink-0">
           <ClipboardCheck className="text-indigo-600" size={22} />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Da verificare</h1>
+          <h1 className="hidden md:block text-2xl font-bold text-gray-800">Da verificare</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             Record con date incoerenti o dati da controllare. Quando correggi un record, sparisce dalla lista da solo;
             se un dato è insolito ma giusto, segnalo come corretto.
@@ -102,7 +102,7 @@ export default function Verifiche() {
       </div>
 
       {/* Filtro per tipo */}
-      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit max-w-full overflow-x-auto">
+      <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit max-w-full overflow-x-auto no-scrollbar">
         {TABS.filter(t => t.id === 'tutti' || perTipo[t.id]).map(t => {
           const n = t.id === 'tutti' ? problemi.length : perTipo[t.id] ?? 0
           return (
@@ -175,11 +175,11 @@ export default function Verifiche() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0 sm:ml-auto">
+                  <div className="grid grid-cols-2 sm:flex gap-2 flex-shrink-0 sm:ml-auto">
                     {p.record_id != null && (
                       <button
                         onClick={() => apri(p)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                        className="flex items-center justify-center gap-1.5 px-3 h-10 sm:h-auto sm:py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                       >
                         <Pencil size={14} /> Correggi
                       </button>
@@ -187,7 +187,7 @@ export default function Verifiche() {
                     <button
                       onClick={() => conferma(p)}
                       disabled={ignora.isPending}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 px-3 h-10 sm:h-auto sm:py-1.5 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                     >
                       <CheckCircle2 size={14} /> {p.origine === 'controllo' ? 'È corretto' : 'Risolta'}
                     </button>

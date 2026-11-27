@@ -82,7 +82,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     expire = datetime.now(timezone.utc) + (
         expires_delta if expires_delta else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "iat": int(datetime.now(timezone.utc).timestamp())})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -123,7 +123,24 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Utente disattivato",
         )
+    # Password cambiata o reimpostata dopo l'emissione del token: sessione chiusa
+    cambiata = user.password_cambiata_il
+    if cambiata is not None:
+        if cambiata.tzinfo is None:
+            cambiata = cambiata.replace(tzinfo=timezone.utc)
+        if int(payload.get("iat") or 0) < int(cambiata.timestamp()):
+            raise credentials_exception
+    # Password provvisoria: finche' non la cambia puo' solo leggere il proprio
+    # profilo e cambiare la password.
+    if user.deve_cambiare_password and request.url.path.rstrip("/") not in PERCORSI_CAMBIO_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Devi prima cambiare la password provvisoria",
+        )
     return user
+
+
+PERCORSI_CAMBIO_PASSWORD = {"/api/auth/me", "/api/auth/cambia-password", "/auth/me", "/auth/cambia-password"}
 
 
 def require_roles(*roles: str) -> Callable:

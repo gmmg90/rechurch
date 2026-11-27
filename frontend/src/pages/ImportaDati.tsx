@@ -358,14 +358,14 @@ export default function ImportaDati() {
   return (
     <div className="p-4 sm:p-8 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Importa Dati</h1>
+        <h1 className="hidden md:block text-2xl font-bold text-gray-800">Importa Dati</h1>
         <p className="text-gray-500 text-sm mt-1">Migra i dati dal tuo database Access</p>
       </div>
 
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-full sm:w-fit">
         <button
           onClick={() => setTab('csv')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
             tab === 'csv' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -373,7 +373,7 @@ export default function ImportaDati() {
         </button>
         <button
           onClick={() => setTab('mdb')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
             tab === 'mdb' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
           }`}
         >

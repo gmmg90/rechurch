@@ -4,17 +4,16 @@ import { Link } from 'react-router-dom'
 import {
   ShieldCheck, Server, Database, Users, Droplets, Star, Heart,
   BookOpen, Wallet, CalendarDays, ScanLine, Upload, HardDrive,
-  Clock, Cake, Church, ChevronRight, RefreshCw,
+  Clock, Church, ChevronRight, RefreshCw,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { configApi, rubricaApi, matrimoniApi, backupApi } from '../api/client'
+import { configApi, backupApi } from '../api/client'
 import { useModuli } from '../contexts/ModuliContext'
 
 const ICONE: Record<string, React.ElementType> = {
   Droplets, Star, Heart, BookOpen, Wallet, CalendarDays, ScanLine, Upload,
 }
 
-const formatDate = (iso: string) => new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: 'long' })
 
 // Regione del database dedotta dall'host (Neon, Render Postgres, Supabase)
 function regioneDb(host?: string) {
@@ -79,16 +78,6 @@ export default function Amministrazione() {
     queryFn: () => configApi.getSistema(),
   })
 
-  const { data: compleanni = [] } = useQuery({
-    queryKey: ['compleanni-prossimi-admin'],
-    queryFn: () => rubricaApi.complegenniProssimi(14),
-  })
-
-  const { data: anniversari = [] } = useQuery({
-    queryKey: ['anniversari-prossimi-admin'],
-    queryFn: () => matrimoniApi.anniversariProssimi(14),
-  })
-
   const backupNow = useMutation({
     mutationFn: () => backupApi.esegui(),
     onSuccess: () => {
@@ -110,32 +99,16 @@ export default function Amministrazione() {
     }
   }
 
-  const allEvents = [
-    ...compleanni.map(c => ({
-      tipo: 'compleanno' as const,
-      nome: `${c.nome} ${c.cognome}`,
-      giorni: c.giorni_mancanti,
-      dettaglio: c.giorni_mancanti === 0 ? `Oggi — ${c.eta} anni` : `Tra ${c.giorni_mancanti} giorni — ${c.eta} anni`,
-      data: c.data_compleanno,
-    })),
-    ...anniversari.map(a => ({
-      tipo: 'anniversario' as const,
-      nome: `${a.sposo} & ${a.sposa}`,
-      giorni: a.giorni_mancanti,
-      dettaglio: a.giorni_mancanti === 0 ? `Oggi — ${a.anni}° anniversario` : `Tra ${a.giorni_mancanti} giorni — ${a.anni}° anniversario`,
-      data: a.data_anniversario,
-    })),
-  ].sort((a, b) => a.giorni - b.giorni)
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
         <div className="flex items-center gap-3">
-          <ShieldCheck className="text-indigo-600" size={28} />
+          <ShieldCheck className="hidden md:block text-indigo-600" size={28} />
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Amministrazione</h1>
-            <p className="text-gray-500 text-sm mt-0.5">Gestione moduli, sistema e scadenze</p>
+            <h1 className="hidden md:block text-2xl font-bold text-gray-800">Amministrazione</h1>
+            <p className="text-gray-500 text-sm mt-0.5">Moduli attivi, stato del sistema e azioni rapide</p>
           </div>
         </div>
         <button
@@ -264,32 +237,6 @@ export default function Amministrazione() {
             </div>
           </section>
 
-          {/* Prossimi eventi (compleanni + anniversari) */}
-          <section>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Prossimi 14 giorni
-            </h2>
-            {allEvents.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center text-gray-400 text-sm">
-                Nessun compleanno o anniversario
-              </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
-                {allEvents.slice(0, 8).map((ev, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${ev.tipo === 'compleanno' ? 'bg-pink-50 text-pink-500' : 'bg-rose-50 text-rose-500'}`}>
-                      {ev.tipo === 'compleanno' ? <Cake size={13} /> : <Heart size={13} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{ev.nome}</p>
-                      <p className="text-xs text-gray-400">{ev.dettaglio}</p>
-                    </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(ev.data)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
         </div>
       </div>
     </div>

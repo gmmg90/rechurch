@@ -461,6 +461,8 @@ export interface AuthUser {
   chiesa_id?: number | null
   ultimo_accesso?: string
   created_at?: string
+  /** Password provvisoria: va cambiata prima di usare il programma */
+  deve_cambiare_password?: boolean
 }
 
 export const authApi = {
@@ -471,7 +473,11 @@ export const authApi = {
     ).then(r => r.data),
   me: () => api.get<AuthUser>('/auth/me').then(r => r.data),
   cambiaPassword: (password_attuale: string, nuova_password: string) =>
-    api.put('/auth/cambia-password', { password_attuale, nuova_password }).then(r => r.data),
+    api.put<{ ok: boolean; message: string; access_token: string }>(
+      '/auth/cambia-password', { password_attuale, nuova_password }).then(r => r.data),
+  /** Solo amministratori: genera una password provvisoria per un altro utente */
+  resetPassword: (id: number) =>
+    api.post<{ password_temporanea: string }>(`/auth/utenti/${id}/reset-password`).then(r => r.data),
   listUtenti: () => api.get<AuthUser[]>('/auth/utenti').then(r => r.data),
   createUtente: (data: {
     nome: string; cognome: string; email: string; ruolo: string; password: string; chiesa_id?: number | null

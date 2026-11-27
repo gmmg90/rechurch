@@ -17,6 +17,8 @@ interface AuthContextType {
   hasRole: (...roles: string[]) => boolean
   /** Id della chiesa a cui l'utente è limitato (null = vede tutta la parrocchia) */
   chiesaUtente: number | null
+  /** Dopo un cambio password: salva il nuovo token e ricarica il profilo */
+  aggiornaSessione: (token: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -55,6 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user)
   }, [])
 
+  const aggiornaSessione = useCallback(async (token: string) => {
+    localStorage.setItem(TOKEN_KEY, token)
+    setUser(await authApi.me())
+  }, [])
+
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     setUser(null)
@@ -72,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const chiesaUtente = user && user.ruolo !== 'admin' && user.chiesa_id ? user.chiesa_id : null
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, hasRole, chiesaUtente }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, hasRole, chiesaUtente, aggiornaSessione }}>
       {children}
     </AuthContext.Provider>
   )

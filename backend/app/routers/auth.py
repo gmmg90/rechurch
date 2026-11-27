@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timezone
 from typing import List
 
@@ -18,6 +19,8 @@ from app.auth import (
 from datetime import timedelta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+PASSWORD_MIN = 8
 
 
 def _valida_chiesa(db: Session, chiesa_id) -> None:
@@ -71,9 +74,50 @@ def cambia_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La password attuale non e' corretta",
         )
-    current_user.password_hash = hash_password(data.nuova_password)
+    nuova = data.nuova_password
+    if len(nuova) < PASSWORD_MIN:
+        raise HTTPException(status_code=400, detail=f"La nuova password deve avere almeno {PASSWORD_MIN} caratteri")
+    if nuova == data.password_attuale:
+        raise HTTPException(status_code=400, detail="La nuova password deve essere diversa da quella attuale")
+    current_user.password_hash = hash_password(nuova)
+    current_user.deve_cambiare_password = False
+    current_user.password_cambiata_il = datetime.now(timezone.utc)
     db.commit()
-    return {"ok": True, "message": "Password aggiornata con successo"}
+    # Le altre sessioni (altri dispositivi) si chiudono; questa riceve un token nuovo
+    token = create_access_token(
+        data={"sub": str(current_user.id)},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    return {"ok": True, "message": "Password aggiornata con successo", "access_token": token}
+
+
+def _password_temporanea() -> str:
+    # 12 caratteri senza simboli ambigui (0/O, 1/l/I), in tre gruppi facili da dettare
+    alfabeto = "abcdefghjkmnpqrstuvwxyz23456789"
+    s = "".join(secrets.choice(alfabeto) for _ in range(12))
+    return f"{s[:4]}-{s[4:8]}-{s[8:]}"
+
+
+@router.post("/utenti/{utente_id}/reset-password", response_model=schemas.ResetPasswordResponse)
+def reset_password_utente(
+    utente_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Utente = Depends(require_roles("admin")),
+):
+    """L'amministratore reimposta la password di un altro utente: viene generata una
+    password provvisoria (mostrata una sola volta) che l'utente dovra' cambiare al
+    primo accesso. Le sessioni aperte dell'utente vengono chiuse."""
+    if utente_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Per la tua password usa \"Il mio account\"")
+    user = db.query(models.Utente).filter(models.Utente.id == utente_id).first()
+    if not user or is_owner(user):
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    pw = _password_temporanea()
+    user.password_hash = hash_password(pw)
+    user.deve_cambiare_password = True
+    user.password_cambiata_il = datetime.now(timezone.utc)
+    db.commit()
+    return {"password_temporanea": pw}
 
 
 @router.get("/utenti", response_model=List[schemas.UtenteResponse])
@@ -92,6 +136,8 @@ def create_utente(
     db: Session = Depends(get_db),
     _: models.Utente = Depends(require_roles("admin")),
 ):
+    if len(data.password) < PASSWORD_MIN:
+        raise HTTPException(status_code=400, detail=f"La password deve avere almeno {PASSWORD_MIN} caratteri")
     existing = db.query(models.Utente).filter(models.Utente.email == data.email).first()
     if existing:
         raise HTTPException(
@@ -103,6 +149,7 @@ def create_utente(
         cognome=data.cognome,
         email=data.email,
         password_hash=hash_password(data.password),
+        deve_cambiare_password=True,  # la password l'ha scelta l'amministratore
         ruolo=data.ruolo,
         chiesa_id=data.chiesa_id,
         attivo=True,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Church,
   Home,
@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useChiese } from './ChiesaSelect'
@@ -36,34 +37,21 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const ALL_NAV_ITEMS = [
-  { to: '/',            label: 'Dashboard',        icon: Home,        end: true,  modulo: null,          desktopOnly: false },
-  { to: '/battesimi',   label: 'Battesimi',         icon: Droplets,    end: false, modulo: 'battesimi',    desktopOnly: false },
-  { to: '/comunioni',   label: 'Comunioni',         icon: Wheat,       end: false, modulo: 'comunioni',    desktopOnly: false },
-  { to: '/cresime',     label: 'Cresime',           icon: Star,        end: false, modulo: 'cresime',      desktopOnly: false },
-  { to: '/matrimoni',   label: 'Matrimoni',         icon: Heart,       end: false, modulo: 'matrimoni',    desktopOnly: false },
-  { to: '/rubrica',     label: 'Rubrica',           icon: BookOpen,    end: false, modulo: 'rubrica',      desktopOnly: false },
-  { to: '/contabilita', label: 'Contabilità',       icon: Wallet,      end: false, modulo: 'contabilita',  desktopOnly: false },
-  { to: '/scanner',     label: 'Scanner Docs',      icon: ScanLine,    end: false, modulo: 'scanner',      desktopOnly: false },
-  { to: '/scadenziario',label: 'Scadenziario',      icon: CalendarDays,end: false, modulo: 'scadenziario', desktopOnly: false },
-  // Attività "da scrivania": nascoste su mobile per uno smartphone più snello
-  { to: '/certificati', label: 'Modelli Certif.',   icon: FileText,    end: false, modulo: 'certificati',  desktopOnly: true },
-  { to: '/importa',     label: 'Importa Dati',      icon: Upload,      end: false, modulo: 'importa',      desktopOnly: true },
-  { to: '/verifiche',   label: 'Da verificare',     icon: ClipboardCheck, end: false, modulo: 'verifiche', desktopOnly: true },
-  { to: '/impostazioni',label: 'Impostazioni',      icon: Settings,    end: false, modulo: null,           desktopOnly: true },
+  { to: '/',            label: 'Dashboard',        icon: Home,        end: true,  modulo: null },
+  { to: '/battesimi',   label: 'Battesimi',         icon: Droplets,    end: false, modulo: 'battesimi' },
+  { to: '/comunioni',   label: 'Comunioni',         icon: Wheat,       end: false, modulo: 'comunioni' },
+  { to: '/cresime',     label: 'Cresime',           icon: Star,        end: false, modulo: 'cresime' },
+  { to: '/matrimoni',   label: 'Matrimoni',         icon: Heart,       end: false, modulo: 'matrimoni' },
+  { to: '/rubrica',     label: 'Rubrica',           icon: BookOpen,    end: false, modulo: 'rubrica' },
+  { to: '/contabilita', label: 'Contabilità',       icon: Wallet,      end: false, modulo: 'contabilita' },
+  { to: '/scanner',     label: 'Scanner Docs',      icon: ScanLine,    end: false, modulo: 'scanner' },
+  { to: '/scadenziario',label: 'Scadenziario',      icon: CalendarDays,end: false, modulo: 'scadenziario' },
+  // Gestione
+  { to: '/certificati', label: 'Modelli Certif.',   icon: FileText,    end: false, modulo: 'certificati' },
+  { to: '/importa',     label: 'Importa Dati',      icon: Upload,      end: false, modulo: 'importa' },
+  { to: '/verifiche',   label: 'Da verificare',     icon: ClipboardCheck, end: false, modulo: 'verifiche' },
+  { to: '/impostazioni',label: 'Impostazioni',      icon: Settings,    end: false, modulo: null },
 ]
-
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
-  )
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)')
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-  return isMobile
-}
 
 const PAGINE_PARROCCHIA = ['/rubrica', '/certificati', '/importa', '/impostazioni']
 
@@ -80,7 +68,7 @@ const TITOLI: [string, string][] = [
   ['/matrimoni', 'Matrimoni'], ['/rubrica', 'Rubrica'], ['/contabilita', 'Contabilità'],
   ['/scanner', 'Scanner'], ['/scadenziario', 'Scadenziario'], ['/certificati', 'Modelli'],
   ['/importa', 'Importa dati'], ['/verifiche', 'Da verificare'], ['/impostazioni', 'Impostazioni'],
-  ['/utenti', 'Utenti'], ['/amministrazione', 'Amministrazione'],
+  ['/utenti', 'Utenti'], ['/amministrazione', 'Amministrazione'], ['/account', 'Il mio account'],
 ]
 
 export default function Layout() {
@@ -90,12 +78,11 @@ export default function Layout() {
   const { moduli, isLoading: moduliLoading } = useModuli()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
-  const isMobile = useIsMobile()
   const navigate = useNavigate()
   const { data: verifiche } = useQuery({
     queryKey: ['verifiche-conteggio'],
     queryFn: verificheApi.conteggio,
-    enabled: !isMobile && moduli['verifiche'] !== false,
+    enabled: moduli['verifiche'] !== false && !user?.deve_cambiare_password,
     staleTime: 5 * 60_000,
   })
 
@@ -104,18 +91,17 @@ export default function Layout() {
 
   const navItems = [
     ...ALL_NAV_ITEMS.filter(item => {
-      if (isMobile && item.desktopOnly) return false   // snello su mobile
       // Utenti di una singola chiesa: niente pagine di tutta la parrocchia
       if (chiesaUtente !== null && PAGINE_PARROCCHIA.includes(item.to)) return false
       if (!item.modulo) return true
       if (moduliLoading) return true
       return moduli[item.modulo] !== false
     }),
-    // Utenti e Amministrazione: solo admin, e solo su desktop (nascoste su mobile)
-    ...(user?.ruolo === 'admin' && !isMobile
+    // Utenti e Amministrazione: solo admin
+    ...(user?.ruolo === 'admin'
       ? [
-          { to: '/utenti',         label: 'Utenti',          icon: Users,       end: false, modulo: null, desktopOnly: true },
-          { to: '/amministrazione',label: 'Amministrazione', icon: ShieldCheck, end: false, modulo: null, desktopOnly: true },
+          { to: '/utenti',         label: 'Utenti',          icon: Users,       end: false, modulo: null },
+          { to: '/amministrazione',label: 'Amministrazione', icon: ShieldCheck, end: false, modulo: null },
         ]
       : []),
   ]
@@ -135,6 +121,11 @@ export default function Layout() {
   const titolo = path === '/' ? null : (TITOLI.find(([p]) => path === p || path.startsWith(p + '/'))?.[1] ?? null)
   // Pagine di secondo livello (modifica, dettaglio, certificato): freccia indietro
   const sottopagina = path.split('/').filter(Boolean).length > 1
+
+  // Password provvisoria: prima di tutto va scelta una password personale
+  if (user?.deve_cambiare_password && path !== '/account') {
+    return <Navigate to="/account" replace />
+  }
 
   return (
     <div className="flex h-[100dvh] bg-gray-50">
@@ -197,7 +188,9 @@ export default function Layout() {
         {/* User footer */}
         <div className="px-4 py-4 border-t border-indigo-800 space-y-3">
           {user && (
-            <div className="flex items-center gap-3">
+            <NavLink to="/account" title="Il mio account: cambia password"
+              className={({ isActive }) => `flex items-center gap-3 -mx-2 px-2 py-1.5 rounded-lg transition-colors ${
+                isActive ? 'bg-indigo-800' : 'hover:bg-indigo-800'}`}>
               <div className="flex-shrink-0 w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center">
                 <span className="text-white text-xs font-bold">{initials}</span>
               </div>
@@ -214,7 +207,8 @@ export default function Layout() {
                   </p>
                 )}
               </div>
-            </div>
+              <ChevronRight size={16} className="text-indigo-400 shrink-0" />
+            </NavLink>
           )}
 
           <button

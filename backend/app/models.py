@@ -15,6 +15,10 @@ class Utente(Base):
     # Se impostata (e il ruolo non è admin) l'utente vede solo i dati di questa chiesa
     chiesa_id = Column(Integer, ForeignKey("chiese.id", ondelete="SET NULL"), nullable=True)
     attivo = Column(Boolean, default=True, nullable=False)
+    # Password provvisoria (creata o reimpostata dall'amministratore): va cambiata al primo accesso
+    deve_cambiare_password = Column(Boolean, default=False, nullable=False)
+    # Le sessioni aperte prima di questo momento non valgono piu'
+    password_cambiata_il = Column(DateTime(timezone=True), nullable=True)
     ultimo_accesso = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

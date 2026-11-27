@@ -113,17 +113,17 @@ export default function ModelliCertificati() {
     <div className="p-4 sm:p-8 max-w-7xl">
       <button
         onClick={() => navigate('/impostazioni')}
-        className="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-4"
+        className="hidden md:flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm mb-4"
       >
         <ChevronLeft size={16} /> Impostazioni
       </button>
 
       <div className="flex items-start gap-3 mb-6">
-        <div className="p-2.5 bg-indigo-100 rounded-xl">
+        <div className="hidden md:block p-2.5 bg-indigo-100 rounded-xl">
           <FileText className="text-indigo-600" size={22} />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Modelli dei certificati</h1>
+          <h1 className="hidden md:block text-2xl font-bold text-gray-800">Modelli dei certificati</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             Personalizza il testo dei certificati senza toccare il codice. I campi tra parentesi graffe
             (es. <code className="px-1 bg-gray-100 rounded">{'{nome}'}</code>) sono segnaposti che verranno sostituiti con i dati del record.
@@ -170,19 +170,20 @@ export default function ModelliCertificati() {
           ))}
 
           {/* Azioni */}
-          <div className="flex items-center gap-3 pt-2 sticky bottom-0 bg-gray-50/95 backdrop-blur p-4 -mx-4 rounded-xl border border-gray-100">
+          <div className="flex items-center gap-2 md:gap-3 pt-2 sticky sticky-above-nav md:bottom-0 z-10 bg-gray-50/95 backdrop-blur p-3 md:p-4 -mx-4 rounded-xl border border-gray-100">
             <button
               onClick={handleReset}
               disabled={reset.isPending}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 disabled:opacity-50"
+              title="Ripristina il testo originale"
+              className="flex items-center gap-2 px-3 md:px-4 h-11 md:h-auto md:py-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 disabled:opacity-50"
             >
-              <RotateCcw size={15} /> Ripristina default
+              <RotateCcw size={15} /> <span className="hidden md:inline">Ripristina default</span>
             </button>
 
-            <div className="flex-1" />
+            <div className="hidden md:block flex-1" />
 
             {savedAt && (
-              <span className="flex items-center gap-1.5 text-emerald-600 text-sm">
+              <span className="hidden md:flex items-center gap-1.5 text-emerald-600 text-sm">
                 <CheckCircle size={15} /> Salvato
               </span>
             )}
@@ -191,15 +192,15 @@ export default function ModelliCertificati() {
               href={previewUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 border border-gray-200 bg-white rounded-lg hover:bg-gray-50 font-medium"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 md:px-4 h-11 md:h-auto md:py-2 text-sm text-gray-700 border border-gray-200 bg-white rounded-lg hover:bg-gray-50 font-medium whitespace-nowrap"
             >
-              <Eye size={15} /> Anteprima PDF
+              <Eye size={15} /> Anteprima<span className="hidden md:inline"> PDF</span>
             </a>
 
             <button
               onClick={handleSave}
               disabled={!dirty || update.isPending}
-              className="flex items-center gap-2 px-5 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium shadow-sm"
+              className="flex-1 md:flex-none justify-center whitespace-nowrap flex items-center gap-2 px-3 md:px-5 h-11 md:h-auto md:py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium shadow-sm"
             >
               <Save size={15} /> {update.isPending ? 'Salvataggio…' : 'Salva modifiche'}
             </button>

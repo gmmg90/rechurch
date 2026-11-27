@@ -589,6 +589,8 @@ u = db.query(models.Utente).filter(models.Utente.email == os.environ["RP_EMAIL"]
 if not u:
     sys.exit("Utente non trovato")
 u.password_hash = hash_password(os.environ["RP_PW"]); u.attivo = True
+from datetime import datetime, timezone
+u.deve_cambiare_password = True; u.password_cambiata_il = datetime.now(timezone.utc)
 db.commit()
 EOF
     ok "Nuova password per $email ($slug): $pw"

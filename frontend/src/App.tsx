@@ -28,6 +28,8 @@ import MovimentoForm from './pages/contabilita/MovimentoForm'
 import ScadenziarioPage from './pages/scadenziario/ScadenziarioPage'
 import Scanner from './pages/Scanner'
 import Amministrazione from './pages/Amministrazione'
+import FamigliaForm from './pages/rubrica/FamigliaForm'
+import Account from './pages/Account'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -71,12 +73,14 @@ export default function App() {
           <Route path="rubrica/persone/nuova" element={<ProtectedRoute soloParrocchia><PersonaForm /></ProtectedRoute>} />
           <Route path="rubrica/persone/:id" element={<ProtectedRoute soloParrocchia><PersonaDetail /></ProtectedRoute>} />
           <Route path="rubrica/persone/:id/modifica" element={<ProtectedRoute soloParrocchia><PersonaForm /></ProtectedRoute>} />
+          <Route path="rubrica/famiglie/nuova" element={<ProtectedRoute soloParrocchia><FamigliaForm /></ProtectedRoute>} />
           <Route path="rubrica/famiglie/:id" element={<ProtectedRoute soloParrocchia><FamigliaDetail /></ProtectedRoute>} />
           <Route path="contabilita" element={<ContabilitaList />} />
           <Route path="contabilita/nuovo" element={<MovimentoForm />} />
           <Route path="contabilita/:id/modifica" element={<MovimentoForm />} />
           <Route path="scadenziario" element={<ScadenziarioPage />} />
           <Route path="scanner" element={<Scanner />} />
+          <Route path="account" element={<Account />} />
           <Route path="impostazioni" element={<ProtectedRoute soloParrocchia><Impostazioni /></ProtectedRoute>} />
           <Route
             path="utenti"

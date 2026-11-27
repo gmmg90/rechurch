@@ -45,9 +45,13 @@ class CambiaPasswordRequest(BaseModel):
     password_attuale: str
     nuova_password: str
 
+class ResetPasswordResponse(BaseModel):
+    password_temporanea: str
+
 class UtenteResponse(UtenteBase):
     id: int
     attivo: bool
+    deve_cambiare_password: bool = False
     ultimo_accesso: Optional[datetime] = None
     created_at: Optional[datetime] = None
     model_config = {"from_attributes": True}

@@ -69,6 +69,15 @@
   .bottom-above-nav {
     bottom: calc(4.75rem + env(safe-area-inset-bottom));
   }
+  /* barre "sticky" in fondo alla pagina: sopra la barra di navigazione del telefono */
+  .sticky-above-nav {
+    bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 768px) {
+    .sticky-above-nav {
+      bottom: 0;
+    }
+  }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

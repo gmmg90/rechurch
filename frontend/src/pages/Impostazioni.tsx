@@ -118,9 +118,9 @@ export default function Impostazioni() {
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
       <div className="flex items-center gap-3 mb-6">
-        <Building2 className="text-indigo-600" size={24} />
+        <Building2 className="hidden md:block text-indigo-600" size={24} />
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Impostazioni Parrocchia</h1>
+          <h1 className="hidden md:block text-2xl font-bold text-gray-800">Impostazioni Parrocchia</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             Questi dati appaiono nell'intestazione di tutti i certificati PDF
           </p>
@@ -282,7 +282,7 @@ export default function Impostazioni() {
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     File
                   </th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Dimensione
                   </th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -294,8 +294,8 @@ export default function Impostazioni() {
               <tbody className="divide-y divide-gray-50">
                 {backups.map((b) => (
                   <tr key={b.filename} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-700 font-mono text-xs">{b.filename}</td>
-                    <td className="px-4 py-3 text-gray-500">{b.size_kb} KB</td>
+                    <td className="px-4 py-3 text-gray-700 font-mono text-xs break-all">{b.filename}</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-gray-500">{b.size_kb} KB</td>
                     <td className="px-4 py-3 text-gray-500">{formatDate(b.created_at)}</td>
                     <td className="px-4 py-3">
                       <a

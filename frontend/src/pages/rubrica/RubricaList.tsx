@@ -9,7 +9,9 @@ import { CardList, CardItem, Fab } from '../../components/Mobile'
 type Tab = 'persone' | 'famiglie'
 
 export default function RubricaList() {
-  const [tab, setTab] = useState<Tab>('persone')
+  // ?tab=famiglie apre direttamente la scheda Famiglie (es. tornando da Nuova famiglia)
+  const [tab, setTab] = useState<Tab>(() =>
+    new URLSearchParams(window.location.search).get('tab') === 'famiglie' ? 'famiglie' : 'persone')
   const [rawSearch, setRawSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
@@ -84,7 +86,9 @@ export default function RubricaList() {
 
   return (
     <div className="p-4 sm:p-8">
-      {tab === 'persone' && <Fab to="/rubrica/persone/nuova" label="Persona" />}
+      {tab === 'persone'
+        ? <Fab to="/rubrica/persone/nuova" label="Persona" />
+        : <Fab to="/rubrica/famiglie/nuova" label="Famiglia" />}
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div className="flex items-center gap-3">
           <BookOpen className="hidden md:block text-indigo-600" size={28} />
