@@ -409,7 +409,12 @@ cmd_update() {
     fi
     if systemctl is-active --quiet rechurch-pannello 2>/dev/null; then
         ok "Il pannello si riavvia tra pochi secondi con la nuova versione"
-        (sleep 5; systemctl try-restart rechurch-pannello) >/dev/null 2>&1 &
+        # Timer di systemd a parte: un "sleep &" verrebbe ucciso a fine
+        # aggiornamento insieme al servizio rechurch-aggiornamento (o al pannello)
+        systemctl reset-failed rechurch-pannello-riavvio.timer rechurch-pannello-riavvio.service >/dev/null 2>&1 || true
+        systemd-run --quiet --collect --unit=rechurch-pannello-riavvio --on-active=5 \
+            systemctl try-restart rechurch-pannello >/dev/null 2>&1 \
+            || { (sleep 5; systemctl try-restart rechurch-pannello) >/dev/null 2>&1 & }
     fi
     git -C "$REPO_DIR" rev-parse HEAD > "$HOME_DIR/.versione-installata"
     ok "Versione installata: $(git -C "$REPO_DIR" log -1 --format='%h %s')"
